@@ -33,7 +33,7 @@ export class MidBossWave implements WaveStrategy {
       const spawnX = width - 150 + Math.random() * 200;
       const spawnY = marginY + Math.random() * availableH;
       const name = names[i % names.length];
-      engine.spawnHorde(spawnX, spawnY, { name });
+      engine.spawnHorde(spawnX, spawnY, { name, maxHp: 50, hp: 50, damage: 8, speed: 80 });
     }
   }
 }

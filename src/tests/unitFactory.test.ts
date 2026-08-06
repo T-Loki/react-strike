@@ -63,4 +63,25 @@ describe('UnitFactory', () => {
     // Default position is usually calculated using gridPosition or random inside player area
     expect(unit.x).toBeGreaterThanOrEqual(0);
   });
+
+  it('correctly applies hero properties regardless of name', () => {
+    const heroTemplate = {
+      id: 'hero-2',
+      name: 'Valeria the Swift', // not named Aric
+      type: 'hero' as const,
+      hp: 400,
+      maxHp: 400,
+      damage: 50,
+      range: 50,
+      attackSpeed: 1.5,
+      cost: 400,
+      abilities: []
+    };
+    
+    const unit = UnitFactory.fromTemplate(heroTemplate, 1000, 500);
+    expect(unit.unitType).toBe('hero');
+    expect(unit.armor).toBe(8); // hero default
+    expect(unit.speed).toBe(100); // hero default
+    expect(unit.color).toBe('#f59e0b'); // hero default color
+  });
 });

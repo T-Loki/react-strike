@@ -5,12 +5,8 @@ describe('GameEngine Integration Tests', () => {
   let engine: GameEngine;
 
   beforeEach(() => {
+    GameEngine.resetInstance();
     engine = GameEngine.getInstance();
-    engine.clearBoard();
-    if (engine.getIsPaused()) {
-      engine.resume();
-    }
-    engine.setGameSpeed(1.0);
   });
 
   it('toggles pause and resume correctly', () => {

@@ -79,6 +79,7 @@ export interface Unit {
   gridPosition?: { x: number; y: number };
   homeX?: number;
   homeY?: number;
+  unitType?: 'common' | 'elite' | 'hero';
 }
 
 export interface DamageText {
@@ -106,15 +107,15 @@ export interface AttackEffect {
 export type BattlePhase = 'HOLDING_POSITION' | 'ENGAGING_ENEMY' | 'VICTORY' | 'DEFEAT' | 'PAUSED' | 'SURRENDERED';
 
 export interface BattlefieldZoneConfig {
-  playerSpawnRatio: number;      // Default: 0.30 (0% to 30%)
-  playerAreaRatio: number;       // Default: 0.40 (0% to 40%)
-  neutralAreaRatio: number;      // Default: 0.70 (40% to 70%)
-  enemySpawnRatio: number;       // Default: 1.00 (70% to 100%)
+  playerSpawnRatio: number;      // Default: 0.35 (0% to 35%)
+  playerAreaRatio: number;       // Default: 0.35 (0% to 35%)
+  neutralAreaRatio: number;      // Default: 0.75 (35% to 75%)
+  enemySpawnRatio: number;       // Default: 1.00 (75% to 100%)
 }
 
 export const DEFAULT_BATTLEFIELD_ZONES: BattlefieldZoneConfig = {
-  playerSpawnRatio: 0.30,
-  playerAreaRatio: 0.40,
-  neutralAreaRatio: 0.70,
+  playerSpawnRatio: 0.35,
+  playerAreaRatio: 0.35,
+  neutralAreaRatio: 0.75,
   enemySpawnRatio: 1.00,
 };

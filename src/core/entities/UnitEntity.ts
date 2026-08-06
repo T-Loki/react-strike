@@ -29,7 +29,7 @@ export class DefenderHoldState implements UnitBehaviorState {
     const zoneConfig = context.zoneConfig || DEFAULT_BATTLEFIELD_ZONES;
     const playerAreaWidth = context.canvasWidth * zoneConfig.playerAreaRatio;
 
-    // Scan for breached Horde units entering Player Area (x <= 40% width)
+    // Scan for breached Horde units entering Player Area (x <= 35% width)
     const breachedEnemies = context.horde.filter(
       h => h.data.hp > 0 && h.data.x <= playerAreaWidth
     );
@@ -266,7 +266,7 @@ export class UnitEntity {
     this.data.y = Math.max(marginY, Math.min(canvasHeight - marginY, this.data.y));
 
     if (this.data.team === 'defender') {
-      // Clamped strictly to Player Area (default: 40% of canvas width)
+      // Clamped strictly to Player Area (default: 35% of canvas width)
       const defenderMaxX = canvasWidth * zoneConfig.playerAreaRatio;
       this.data.x = Math.max(marginX, Math.min(defenderMaxX, this.data.x));
     } else {

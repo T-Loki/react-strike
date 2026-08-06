@@ -38,6 +38,14 @@ export class GameEngine {
     return GameEngine.instance;
   }
 
+  /** Test-only method to fully reset the singleton state and prevent test pollution */
+  public static resetInstance(): void {
+    if (GameEngine.instance) {
+      GameEngine.instance.destroy();
+    }
+    GameEngine.instance = new GameEngine();
+  }
+
   public setCanvasSize(width: number, height: number): void {
     this.canvasWidth = width;
     this.canvasHeight = height;
@@ -233,13 +241,13 @@ export class GameEngine {
     for (let iter = 0; iter < 2; iter++) {
       for (let i = 0; i < count; i++) {
         const u1 = activeEntities[i];
-        const isHero1 = u1.data.name.toLowerCase().includes('aric') || u1.data.color === '#f59e0b';
-        const r1 = isHero1 ? 14 : 10;
+        const isHero1 = u1.data.unitType === 'hero';
+        const r1 = isHero1 ? 16 : 10;
 
         for (let j = i + 1; j < count; j++) {
           const u2 = activeEntities[j];
-          const isHero2 = u2.data.name.toLowerCase().includes('aric') || u2.data.color === '#f59e0b';
-          const r2 = isHero2 ? 14 : 10;
+          const isHero2 = u2.data.unitType === 'hero';
+          const r2 = isHero2 ? 16 : 10;
 
           const minDist = r1 + r2 + 4;
           let { dx, dy, dist } = getDirection(u2.data.x, u2.data.y, u1.data.x, u1.data.y);

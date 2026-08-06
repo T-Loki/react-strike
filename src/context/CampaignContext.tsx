@@ -85,15 +85,13 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const scorchTerritory = (id: string, amount: number = 1000) => {
-    setTerritories((prev) => 
-      prev.map(t => {
-        if (t.id === id && !t.isScorched) {
-          setGold(g => g + amount);
-          return { ...t, isScorched: true, hasActiveBattle: false };
-        }
-        return t;
-      })
-    );
+    const territory = territories.find(t => t.id === id);
+    if (territory && !territory.isScorched) {
+      setGold(g => g + amount);
+      setTerritories((prev) => 
+        prev.map(t => (t.id === id ? { ...t, isScorched: true, hasActiveBattle: false } : t))
+      );
+    }
   };
 
   const allocateUnitToTerritory = (territoryId: string, unitId: string) => {

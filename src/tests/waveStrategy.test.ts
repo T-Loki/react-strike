@@ -6,8 +6,8 @@ describe('WaveStrategy', () => {
   let engine: GameEngine;
 
   beforeEach(() => {
+    GameEngine.resetInstance();
     engine = GameEngine.getInstance();
-    engine.clearBoard();
     engine.setCanvasSize(1000, 500); // Known canvas size for predictability
   });
 
@@ -18,9 +18,12 @@ describe('WaveStrategy', () => {
     const horde = engine.getHorde();
     expect(horde.length).toBe(10);
     
-    // Check that enemies spawn on the right side of the screen
+    // Check that enemies spawn on the right side of the screen and have skirmish stats
     horde.forEach(h => {
       expect(h.x).toBeGreaterThan(800); // width - 150 + random
+      expect(h.hp).toBe(50);
+      expect(h.damage).toBe(8);
+      expect(h.speed).toBe(80);
     });
   });
 
@@ -34,6 +37,14 @@ describe('WaveStrategy', () => {
     const bosses = horde.filter(h => h.name === 'Horde Behemoth');
     expect(bosses.length).toBe(1);
     expect(bosses[0].hp).toBe(300);
+
+    const minions = horde.filter(h => h.name !== 'Horde Behemoth');
+    expect(minions.length).toBe(5);
+    minions.forEach(m => {
+      expect(m.hp).toBe(50);
+      expect(m.damage).toBe(8);
+      expect(m.speed).toBe(80);
+    });
   });
 
   it('EndlessDoomWave spawns high health late-game enemies', () => {

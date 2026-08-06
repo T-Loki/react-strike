@@ -16,11 +16,11 @@ export const getDeployMarginY = (canvasHeight: number): number =>
 
 export class UnitFactory {
   static createDefender(x: number, y: number, template?: Partial<Unit>): Unit {
-    const unitType = (template as Partial<UnitTemplate>)?.type || 'common';
+    const unitType = template?.unitType || 'common';
     const nameLower = (template?.name || '').toLowerCase();
     
     let defaultColor = '#22c55e';
-    if (unitType === 'hero' || nameLower.includes('aric') || nameLower.includes('hero')) {
+    if (unitType === 'hero') {
       defaultColor = '#f59e0b';
     } else if (unitType === 'elite') {
       defaultColor = '#a855f7';
@@ -47,6 +47,7 @@ export class UnitFactory {
       gridPosition: template?.gridPosition,
       homeX: x,
       homeY: y,
+      unitType,
     };
   }
 
@@ -104,7 +105,7 @@ export class UnitFactory {
 
     const nameLower = (template.name || '').toLowerCase();
     let defaultColor = '#22c55e';
-    if (template.type === 'hero' || nameLower.includes('aric')) {
+    if (template.type === 'hero') {
       defaultColor = '#f59e0b';
     } else if (template.type === 'elite') {
       defaultColor = '#a855f7';
@@ -122,6 +123,7 @@ export class UnitFactory {
       attackRange: template.range,
       color: defaultColor,
       gridPosition: template.gridPosition,
+      unitType: template.type,
     });
   }
 }

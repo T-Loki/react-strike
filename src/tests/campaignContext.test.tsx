@@ -6,7 +6,9 @@ import { INITIAL_TERRITORIES } from '../data/territories';
 
 describe('CampaignContext', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <CampaignProvider>{children}</CampaignProvider>
+    <React.StrictMode>
+      <CampaignProvider>{children}</CampaignProvider>
+    </React.StrictMode>
   );
 
   it('initializes with correct default values', () => {
@@ -18,17 +20,20 @@ describe('CampaignContext', () => {
     expect(result.current.globalUnitPool.length).toBe(13); // 6 spearman, 6 crossbow, 1 hero
   });
 
-  it('scorching a territory adds 1000 gold and marks it as scorched', () => {
+  it('scorching a territory adds 1000 gold exactly once even if updater runs twice', () => {
     const { result } = renderHook(() => useCampaign(), { wrapper });
     
+    // Simulate Strict Mode double-invoke by rendering again or explicitly asserting the total
+    const initialGold = result.current.gold;
+    const targetId = result.current.territories.find(t => !t.isScorched)?.id;
+    
     act(() => {
-      const targetId = result.current.territories.find(t => !t.isScorched)?.id;
       if (targetId) {
         result.current.scorchTerritory(targetId);
       }
     });
 
-    expect(result.current.gold).toBe(1500); // 500 + 1000
+    expect(result.current.gold).toBe(initialGold + 1000); // 500 + 1000, not + 2000
     const scorched = result.current.territories.filter(t => t.isScorched);
     expect(scorched.length).toBeGreaterThan(0);
     expect(scorched[0].hasActiveBattle).toBe(false);

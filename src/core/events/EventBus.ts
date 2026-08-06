@@ -34,7 +34,10 @@ export class EventBus {
     ...args: GameEventPayloads[K] extends void ? [] : [GameEventPayloads[K]]
   ): void {
     if (!this.listeners[event]) return;
-    this.listeners[event]!.forEach(cb => (cb as any)(...args));
+    this.listeners[event]!.forEach(cb => {
+      const typedCb = cb as (...a: typeof args) => void;
+      typedCb(...args);
+    });
   }
 
   clear(): void {
