@@ -7,6 +7,8 @@ import { BattleCanvas } from './BattleCanvas';
 import { useCampaign } from '../../context/CampaignContext';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
+import { RoundSummaryScreen } from '../logistics/RoundSummaryScreen';
+
 interface Props {
   onNavigate: (view: GameState) => void;
 }
@@ -49,20 +51,54 @@ class PreBattleState implements PhaseState {
   }
 }
 
+const CombatWrapper: React.FC<{ context: PhaseContext }> = ({ context }) => {
+  const { territories, resolveBattleOutcome } = useCampaign();
+  const activeTerritory = territories.find(t => t.hasActiveBattle) || territories[0];
+
+  const handleVictoryComplete = () => {
+    const remainingCount = resolveBattleOutcome(activeTerritory.id, 'victory');
+    if (remainingCount > 0) {
+      context.setPhase('battle_select');
+    } else {
+      context.setPhase('round_summary');
+    }
+  };
+
+  const handleSurrenderCity = () => {
+    const remainingCount = resolveBattleOutcome(activeTerritory.id, 'surrendered');
+    if (remainingCount > 0) {
+      context.setPhase('battle_select');
+    } else {
+      context.setPhase('round_summary');
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center relative">
+      <BattleCanvas 
+        onBackToMap={() => context.setPhase('pre_battle')} 
+        onNavigate={context.onNavigate}
+        onVictoryComplete={handleVictoryComplete}
+        onSurrenderCity={handleSurrenderCity}
+      />
+    </div>
+  );
+};
+
 class CombatState implements PhaseState {
   id: RunPhase = 'combat';
   render(context: PhaseContext) {
-    const handleCombatEnd = () => {
-      if (context.remainingBattles > 0) {
-        context.setPhase('battle_select');
-      } else {
-        context.setPhase('empire_management');
-      }
-    };
+    return <CombatWrapper context={context} />;
+  }
+}
+
+class RoundSummaryState implements PhaseState {
+  id: RunPhase = 'round_summary';
+  render(context: PhaseContext) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center relative">
-         <BattleCanvas onBackToMap={handleCombatEnd} onNavigate={context.onNavigate} />
-      </div>
+      <RoundSummaryScreen
+        onProceedToEmpireManagement={() => context.setPhase('empire_management')}
+      />
     );
   }
 }
@@ -83,6 +119,7 @@ const PHASE_STATES: Record<RunPhase, PhaseState> = {
   battle_select: new BattleSelectState(),
   pre_battle: new PreBattleState(),
   combat: new CombatState(),
+  round_summary: new RoundSummaryState(),
   game_over: new GameOverState(),
 };
 
@@ -101,12 +138,6 @@ export const CampaignOrchestrator: React.FC<Props> = ({ onNavigate }) => {
   return (
     <ErrorBoundary>
       <div className={`relative w-full ${phase === 'combat' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-y-auto'} bg-black font-sans text-white flex flex-col`}>
-         <div className="absolute bottom-4 left-4 z-50">
-            <button onClick={() => onNavigate('menu')} className="theme-btn px-4 py-2 text-sm bg-slate-800 rounded shadow-md">
-              Return to Menu
-            </button>
-         </div>
-         
          <div className="absolute top-4 left-4 z-50 text-xs opacity-50 uppercase tracking-widest text-amber-500 pointer-events-none">
            Current Phase: {phase}
          </div>

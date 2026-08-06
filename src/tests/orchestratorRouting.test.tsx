@@ -5,9 +5,10 @@ import { CampaignProvider } from '../context/CampaignContext';
 
 // Mock canvas elements because Vitest/JSDOM doesn't support them well
 vi.mock('../features/combat/BattleCanvas', () => ({
-  BattleCanvas: ({ onBackToMap }: { onBackToMap: () => void }) => (
+  BattleCanvas: ({ onBackToMap, onVictoryComplete }: any) => (
     <div data-testid="mock-battle-canvas">
       <button onClick={onBackToMap}>End Battle</button>
+      <button onClick={onVictoryComplete}>Win Battle</button>
     </div>
   )
 }));
@@ -58,11 +59,36 @@ describe('Campaign Orchestrator Routing', () => {
     fireEvent.click(startBattleBtn);
     expect(screen.getByText(/Current Phase: combat/i)).toBeInTheDocument();
 
-    // Combat -> ends. Depending on remainingBattles (starts at 0), it goes back to empire_management
+    // Combat -> retreat/back returns to pre_battle (Pre-Battle Planning)
     const endBattleBtn = screen.getByText('End Battle');
     fireEvent.click(endBattleBtn);
     
-    // Because initial remainingBattles is 0, it should return to empire_management
-    expect(screen.getByText(/Current Phase: empire_management/i)).toBeInTheDocument();
+    // Returns to pre_battle phase
+    expect(screen.getByText(/Current Phase: pre_battle/i)).toBeInTheDocument();
+  });
+
+  it('cycles to round_summary state when all battles are finished', () => {
+    const navigateSpy = vi.fn();
+
+    render(
+      <CampaignProvider>
+        <CampaignOrchestrator onNavigate={navigateSpy} />
+      </CampaignProvider>
+    );
+
+    // Skip to battle_select
+    fireEvent.click(screen.getByText('End Management Phase'));
+    
+    // Engage
+    fireEvent.click(screen.getAllByText(/Engage Horde/i)[0]);
+    
+    // Start Battle
+    fireEvent.click(screen.getByText('Start Battle'));
+
+    // Win Battle
+    fireEvent.click(screen.getByText('Win Battle'));
+
+    // Since it's the last (or only) battle in our mock default context, it should go to round_summary
+    expect(screen.getByText(/Current Phase: round_summary/i)).toBeInTheDocument();
   });
 });

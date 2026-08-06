@@ -28,16 +28,33 @@ export interface UnitTemplate {
   gridPosition?: { x: number; y: number };
 }
 
+export interface Building {
+  id: string;
+  name: string;
+  level: number;
+  maxLevel: number;
+  upgradeCost: number;
+  type: 'production' | 'defense' | 'faith' | 'utility';
+  effectDescription: string;
+}
+
 export interface Territory {
   id: string;
   name: string;
   type: 'barren' | 'merchant' | 'fortress' | 'citadel';
   ringLevel: number;
   resourceYield: number;
-  upkeepCost: number;
+  faithYield?: number;
   isScorched: boolean;
   hasActiveBattle: boolean;
   allocatedDefenders: UnitTemplate[];
+  buildings: Building[];
+  gridConfig?: {
+    cols: number;
+    rows: number;
+    cellPx: number;
+    locationId: string;
+  };
 }
 
 export interface Unit {
@@ -86,7 +103,7 @@ export interface AttackEffect {
   color: string;
 }
 
-export type BattlePhase = 'HOLDING_POSITION' | 'ENGAGING_ENEMY' | 'VICTORY' | 'DEFEAT' | 'PAUSED';
+export type BattlePhase = 'HOLDING_POSITION' | 'ENGAGING_ENEMY' | 'VICTORY' | 'DEFEAT' | 'PAUSED' | 'SURRENDERED';
 
 export interface BattlefieldZoneConfig {
   playerSpawnRatio: number;      // Default: 0.30 (0% to 30%)

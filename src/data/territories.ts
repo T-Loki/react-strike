@@ -1,4 +1,17 @@
-import type { Territory } from '../types/combat';
+import type { Territory, UnitTemplate } from '../types/combat';
+import {
+  INITIAL_BUILDINGS_BARREN,
+  INITIAL_BUILDINGS_MERCHANT,
+  INITIAL_BUILDINGS_FORTRESS,
+  INITIAL_BUILDINGS_CITADEL
+} from './buildings';
+import { GARRISON_SOLDIER } from './units';
+
+const createGarrisonTrio = (territoryPrefix: string): UnitTemplate[] => [
+  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_1` },
+  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_2` },
+  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_3` },
+];
 
 export const INITIAL_TERRITORIES: Territory[] = [
   {
@@ -7,10 +20,11 @@ export const INITIAL_TERRITORIES: Territory[] = [
     type: 'barren',
     ringLevel: 3,
     resourceYield: 10,
-    upkeepCost: 5,
+    faithYield: 5,
     isScorched: false,
     hasActiveBattle: false,
-    allocatedDefenders: [],
+    allocatedDefenders: createGarrisonTrio('outer'),
+    buildings: INITIAL_BUILDINGS_BARREN,
   },
   {
     id: 'terr_merchant_slums',
@@ -18,10 +32,11 @@ export const INITIAL_TERRITORIES: Territory[] = [
     type: 'merchant',
     ringLevel: 2,
     resourceYield: 50,
-    upkeepCost: 15,
+    faithYield: 15,
     isScorched: false,
     hasActiveBattle: false,
-    allocatedDefenders: [],
+    allocatedDefenders: createGarrisonTrio('merchant'),
+    buildings: INITIAL_BUILDINGS_MERCHANT,
   },
   {
     id: 'terr_inner_fortress',
@@ -29,10 +44,11 @@ export const INITIAL_TERRITORIES: Territory[] = [
     type: 'fortress',
     ringLevel: 1,
     resourceYield: 0,
-    upkeepCost: 30,
+    faithYield: 25,
     isScorched: false,
     hasActiveBattle: false,
-    allocatedDefenders: [],
+    allocatedDefenders: createGarrisonTrio('fortress'),
+    buildings: INITIAL_BUILDINGS_FORTRESS,
   },
   {
     id: 'terr_valhalla',
@@ -40,9 +56,10 @@ export const INITIAL_TERRITORIES: Territory[] = [
     type: 'citadel',
     ringLevel: 0,
     resourceYield: 100,
-    upkeepCost: 100,
+    faithYield: 50,
     isScorched: false,
     hasActiveBattle: false,
-    allocatedDefenders: [],
+    allocatedDefenders: createGarrisonTrio('citadel'),
+    buildings: INITIAL_BUILDINGS_CITADEL,
   },
 ];

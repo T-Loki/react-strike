@@ -32,7 +32,7 @@ describe('Combat Math Utils', () => {
   });
 
   it('calculates Scorched Earth payout', () => {
-    const t: Territory = { id: '1', name: 'Farm', type: 'barren', ringLevel: 1, upkeepCost: 10, resourceYield: 5, isScorched: false, hasActiveBattle: false, allocatedDefenders: [] };
+    const t: Territory = { id: '1', name: 'Farm', type: 'barren', ringLevel: 1, resourceYield: 5, isScorched: false, hasActiveBattle: false, allocatedDefenders: [], buildings: [] };
     expect(calculateScorchedPayout(t)).toBe(1000);
   });
 
@@ -41,5 +41,22 @@ describe('Combat Math Utils', () => {
     expect(getHealthPercentage(50, 100)).toBe(50);
     expect(getHealthPercentage(0, 0)).toBe(0);
     expect(getHealthPercentage(10, -50)).toBe(0);
+    expect(getHealthPercentage(NaN, 100)).toBe(0);
+    expect(getHealthPercentage(100, NaN)).toBe(0);
+  });
+
+  it('protects against NaN and Infinity inputs in distance and direction math', () => {
+    expect(getDistance(NaN, 0, 3, 4)).toBe(0);
+    expect(getDistance(0, NaN, 3, 4)).toBe(0);
+    
+    const dirNaN = getDirection(NaN, 0, 3, 4);
+    expect(dirNaN.dist).toBe(0);
+    expect(dirNaN.dx).toBe(0);
+    expect(dirNaN.dy).toBe(0);
+
+    const dirInf = getDirection(0, 0, Infinity, Infinity);
+    expect(dirInf.dist).toBe(0);
+    expect(dirInf.dx).toBe(0);
+    expect(dirInf.dy).toBe(0);
   });
 });

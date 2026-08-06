@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useCampaign } from '../../context/CampaignContext';
 import type { GameState } from '../../types/game';
 import type { UnitTemplate } from '../../types/combat';
-import { Shield, Play, ArrowLeft, FlaskConical, X, Sparkles, UserCheck, Layers, Infinity } from 'lucide-react';
-import { UNIT_ROSTER } from '../../data/units';
+import { Shield, Play, ArrowLeft, FlaskConical, Home } from 'lucide-react';
+import { UNIT_ROSTER, GARRISON_SOLDIER } from '../../data/units';
 import { FormationGrid } from './FormationGrid';
-import { UnitRosterList } from './UnitRosterList';
+import { UnitRosterList, type StackEntry } from './UnitRosterList';
+import { DEPLOY_GRID_COLS, DEPLOY_GRID_ROWS } from '../../core/factories/UnitFactory';
 
 interface Props {
   onStartBattle?: () => void;
@@ -15,7 +16,9 @@ interface Props {
 }
 
 // Non-hero unit templates used for the sandbox infinite bench
-const SANDBOX_INFINITE_UNITS: UnitTemplate[] = UNIT_ROSTER.filter(u => u.type !== 'hero');
+const SANDBOX_INFINITE_UNITS: UnitTemplate[] = UNIT_ROSTER.filter(
+  u => u.type !== 'hero' && u.name !== 'City Militia' && u.name !== 'Garrison Soldier'
+);
 
 export const PreBattleSetup: React.FC<Props> = ({ 
   onStartBattle, 
@@ -23,24 +26,18 @@ export const PreBattleSetup: React.FC<Props> = ({
   onNavigate,
   isSandboxMode = false 
 }) => {
-  const { territories, globalUnitPool, updateUnitGridPosition } = useCampaign();
-  // In sandbox mode, selectedUnitId may refer to either a real pool unit or a
-  // template name (prefixed with "sandbox:") for the infinite bench.
+  const { territories, globalUnitPool, sandboxDefenders, updateUnitGridPosition } = useCampaign();
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const territory = territories.find(t => t.hasActiveBattle) || territories[0];
+  const activeLocationId = isSandboxMode ? 'sandbox' : territory.id;
 
-  // ── Sandbox infinite bench logic ─────────────────────────────────────────────
-  // In sandbox mode non-hero units are always available (infinite copies).
-  // Hero units still come from the real pool (limited to 1).
-
-
-  // Combined list of defenders for the grid (always uses territory.allocatedDefenders)
+  // Combined list of defenders for the grid
   const poolToUse = globalUnitPool.length > 0 ? globalUnitPool : UNIT_ROSTER;
   const allocatedDefenders = isSandboxMode
     ? [
-        ...(territory?.allocatedDefenders || []),
-        ...poolToUse.filter(g => !(territory?.allocatedDefenders || []).some(a => a.id === g.id))
+        ...sandboxDefenders,
+        ...poolToUse.filter(g => !sandboxDefenders.some(a => a.id === g.id))
       ]
     : (territory?.allocatedDefenders || []);
 
@@ -48,35 +45,19 @@ export const PreBattleSetup: React.FC<Props> = ({
   const unassignedUnits = allocatedDefenders.filter(u => u.gridPosition === undefined);
   const assignedUnits = allocatedDefenders.filter(u => u.gridPosition !== undefined);
 
-  // ── Stack display ──────────────────────────────────────────────────────────
-  // For sandbox: show infinite non-hero stacks + real hero stack from pool.
-  // For campaign: normal limited stacks from unassigned pool.
-
-  type StackEntry = {
-    name: string;
-    type: string;
-    hp: number;
-    damage: number;
-    units: UnitTemplate[];
-    infinite: boolean;   // true = sandbox unlimited
-    template?: UnitTemplate; // source template for spawning infinite copies
-  };
-
   let displayStacks: StackEntry[];
 
   if (isSandboxMode) {
-    // Infinite non-hero types (always present, never depleted)
     const infiniteStacks: StackEntry[] = SANDBOX_INFINITE_UNITS.map(tmpl => ({
       name: tmpl.name,
       type: tmpl.type,
       hp: tmpl.hp,
       damage: tmpl.damage,
-      units: [],          // empty — we create fresh copies on demand
+      units: [],
       infinite: true,
       template: tmpl,
     }));
 
-    // Real hero units from pool (limited)
     const heroStacksMap: Record<string, StackEntry> = {};
     unassignedUnits
       .filter(u => u.type === 'hero')
@@ -89,7 +70,6 @@ export const PreBattleSetup: React.FC<Props> = ({
 
     displayStacks = [...infiniteStacks, ...Object.values(heroStacksMap)];
   } else {
-    // Standard campaign mode: group unassigned into stacks by name
     const map: Record<string, StackEntry> = {};
     unassignedUnits.forEach(unit => {
       if (!map[unit.name]) {
@@ -100,10 +80,6 @@ export const PreBattleSetup: React.FC<Props> = ({
     displayStacks = Object.values(map);
   }
 
-  // ── Selected unit resolution ──────────────────────────────────────────────
-  // selectedUnitId can be:
-  //   - a real unit ID (from pool)
-  //   - "sandbox:<templateName>" for infinite bench selections
   const isSandboxSelection = selectedUnitId?.startsWith('sandbox:');
   const sandboxSelectedName = isSandboxSelection ? selectedUnitId!.slice('sandbox:'.length) : null;
   const selectedUnit = isSandboxSelection
@@ -111,7 +87,6 @@ export const PreBattleSetup: React.FC<Props> = ({
     : unassignedUnits.find(u => u.id === selectedUnitId);
   const isAnySelected = selectedUnitId !== null;
 
-  // ── Cell click ────────────────────────────────────────────────────────────
   const handleCellClick = (x: number, y: number) => {
     const occupant = assignedUnits.find(u => u.gridPosition?.x === x && u.gridPosition?.y === y);
 
@@ -121,26 +96,21 @@ export const PreBattleSetup: React.FC<Props> = ({
         (selectedUnit && occupant.name === selectedUnit.name);
 
       if (isSameUnit) {
-        // Recall occupant back to bench
-        updateUnitGridPosition(territory.id, occupant.id, undefined);
+        updateUnitGridPosition(activeLocationId, occupant.id, undefined);
         if (!isSandboxSelection) {
           setSelectedUnitId(null);
         }
       } else if (selectedUnitId) {
         if (isSandboxSelection && sandboxSelectedName) {
-          // Replace occupant with a brand-new copy of the infinite unit
-          updateUnitGridPosition(territory.id, occupant.id, undefined);
+          updateUnitGridPosition(activeLocationId, occupant.id, undefined);
           const tmpl = SANDBOX_INFINITE_UNITS.find(t => t.name === sandboxSelectedName);
           if (tmpl) {
             const newId = `sandbox_${tmpl.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-            updateUnitGridPosition(territory.id, newId, { x, y }, tmpl);
+            updateUnitGridPosition(activeLocationId, newId, { x, y }, tmpl);
           }
-          // keep selection active so player can keep placing
         } else {
-          // Swap real unit
-          updateUnitGridPosition(territory.id, occupant.id, undefined);
-          updateUnitGridPosition(territory.id, selectedUnitId!, { x, y });
-          // Advance to next in same stack
+          updateUnitGridPosition(activeLocationId, occupant.id, undefined);
+          updateUnitGridPosition(activeLocationId, selectedUnitId!, { x, y });
           const currentSelected = selectedUnit;
           if (currentSelected) {
             const remaining = unassignedUnits.filter(u => u.name === currentSelected.name && u.id !== selectedUnitId);
@@ -150,23 +120,19 @@ export const PreBattleSetup: React.FC<Props> = ({
           }
         }
       } else {
-        // No unit selected: Recall occupant back to bench
-        updateUnitGridPosition(territory.id, occupant.id, undefined);
+        updateUnitGridPosition(activeLocationId, occupant.id, undefined);
         setSelectedUnitId(null);
       }
     } else if (selectedUnitId) {
       if (isSandboxSelection && sandboxSelectedName) {
-        // Spawn a fresh copy of the infinite unit
         const tmpl = SANDBOX_INFINITE_UNITS.find(t => t.name === sandboxSelectedName);
         if (tmpl) {
           const newId = `sandbox_${tmpl.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-          updateUnitGridPosition(territory.id, newId, { x, y }, tmpl);
+          updateUnitGridPosition(activeLocationId, newId, { x, y }, tmpl);
         }
-        // Keep the sandbox selection active so the user can keep placing
       } else {
-        // Place real unit
         const currentSelected = selectedUnit;
-        updateUnitGridPosition(territory.id, selectedUnitId!, { x, y });
+        updateUnitGridPosition(activeLocationId, selectedUnitId!, { x, y });
         if (currentSelected) {
           const remaining = unassignedUnits.filter(u => u.name === currentSelected.name && u.id !== selectedUnitId);
           setSelectedUnitId(remaining[0]?.id ?? null);
@@ -179,7 +145,6 @@ export const PreBattleSetup: React.FC<Props> = ({
 
   const handleStackClick = (stack: StackEntry) => {
     if (stack.infinite) {
-      // Toggle sandbox infinite selection
       const key = `sandbox:${stack.name}`;
       setSelectedUnitId(selectedUnitId === key ? null : key);
     } else {
@@ -195,20 +160,53 @@ export const PreBattleSetup: React.FC<Props> = ({
 
   const handleClearAll = () => {
     assignedUnits.forEach(u => {
-      updateUnitGridPosition(territory.id, u.id, undefined);
+      updateUnitGridPosition(activeLocationId, u.id, undefined);
     });
     setSelectedUnitId(null);
   };
 
-  // Label for the active selection
+  // ── Auto-fallback spawning when starting wave with 0 deployed units ──
+  const handleStartWaveWrapper = () => {
+    if (!onStartBattle) return;
+
+    if (assignedUnits.length === 0) {
+      // Emergency auto-spawn 3 units into random grid positions
+      const candidatesToDeploy = allocatedDefenders.length >= 3
+        ? allocatedDefenders.slice(0, 3)
+        : [
+            ...allocatedDefenders,
+            { ...GARRISON_SOLDIER, id: `emerg_garrison_1_${Date.now()}` },
+            { ...GARRISON_SOLDIER, id: `emerg_garrison_2_${Date.now()}` },
+            { ...GARRISON_SOLDIER, id: `emerg_garrison_3_${Date.now()}` },
+          ].slice(0, 3);
+
+      const availableGridCoords: { x: number; y: number }[] = [];
+      for (let y = 0; y < DEPLOY_GRID_ROWS; y++) {
+        for (let x = 0; x < DEPLOY_GRID_COLS; x++) {
+          availableGridCoords.push({ x, y });
+        }
+      }
+
+      // Shuffle available positions
+      const shuffled = [...availableGridCoords].sort(() => Math.random() - 0.5);
+
+      candidatesToDeploy.forEach((unit, idx) => {
+        const targetPos = shuffled[idx % shuffled.length];
+        updateUnitGridPosition(activeLocationId, unit.id, targetPos, unit);
+      });
+    }
+
+    onStartBattle();
+  };
+
   const selectionLabel = isSandboxSelection
     ? sandboxSelectedName
     : selectedUnit?.name ?? null;
 
   return (
-    <div className="w-full h-full bg-slate-950 text-slate-200 flex flex-col">
-      {/* ── Top Intel Header ── */}
-      <div className="flex-shrink-0 flex justify-between items-center bg-slate-900 border-b border-slate-700 p-4 shadow-lg z-10">
+    <div className="w-full h-full bg-slate-950 text-slate-200 flex flex-col select-none overflow-hidden">
+      {/* ── Top Header ── */}
+      <div className="flex-shrink-0 flex flex-wrap justify-between items-center bg-slate-900 border-b border-slate-700 p-3.5 shadow-lg z-20 gap-3">
         <div>
           <div className="flex items-center gap-3">
             {isSandboxMode ? (
@@ -227,24 +225,34 @@ export const PreBattleSetup: React.FC<Props> = ({
               {isSandboxMode ? 'Sandbox Mode' : `Ring ${territory.ringLevel}`}
             </span>
           </div>
-          <p className="text-slate-400 text-xs md:text-sm mt-1">
+          <p className="text-slate-400 text-xs md:text-sm mt-0.5">
             <span className="text-amber-400 font-semibold">Wave Intel:</span> {isSandboxMode ? '15 Test Orc Grunts (Simulation)' : '12 Orc Grunts, 1 Mid-Boss Commander (Skirmish)'}
           </p>
         </div>
 
-        <div className="flex gap-3">
+        {/* Top Header Navigation Buttons (Non-overlapping) */}
+        <div className="flex flex-wrap items-center gap-2">
           {!isSandboxMode && onNavigate && (
             <button 
               onClick={() => onNavigate('sandbox')}
-              className="px-3 md:px-4 py-2 md:py-2.5 bg-cyan-900/80 hover:bg-cyan-700 border border-cyan-500/50 text-cyan-200 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg transition-all"
+              className="px-3 py-1.5 bg-cyan-900/80 hover:bg-cyan-700 border border-cyan-500/50 text-cyan-200 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-all"
             >
-              <FlaskConical className="w-4 h-4" /> Test Formation in Sandbox
+              <FlaskConical className="w-3.5 h-3.5" /> Test Formation in Sandbox
+            </button>
+          )}
+
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('menu')}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all"
+            >
+              <Home className="w-3.5 h-3.5" /> Return to Main Menu
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Main Content: Left (Unit Bench) + Right (Deployment Grid) ── */}
+      {/* ── Main Content: Left (Unit Bench) + Right (Draggable & Zoomable Deployment Grid) ── */}
       <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
         <UnitRosterList
           isSandboxMode={isSandboxMode}
@@ -265,12 +273,12 @@ export const PreBattleSetup: React.FC<Props> = ({
         />
       </div>
 
-      {/* ── Action Bar ── */}
-      <div className="flex-shrink-0 flex justify-between items-center p-4 border-t border-slate-700 bg-slate-900 z-10">
+      {/* ── Action Bar Footer ── */}
+      <div className="flex-shrink-0 flex justify-between items-center p-4 border-t border-slate-700 bg-slate-900 z-20">
         {onBackToMap && (
           <button 
             onClick={onBackToMap}
-            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider rounded-lg flex items-center gap-2"
+            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider rounded-lg flex items-center gap-2 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> {isSandboxMode ? 'Back to Mode Select' : 'Back to Map'}
           </button>
@@ -278,7 +286,7 @@ export const PreBattleSetup: React.FC<Props> = ({
 
         {onStartBattle && (
           <button 
-            onClick={onStartBattle}
+            onClick={handleStartWaveWrapper}
             className="px-8 py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all hover:scale-105 flex items-center gap-2"
           >
             <Play className="w-5 h-5 fill-current" /> {isSandboxMode ? 'Launch Simulation' : 'Start Wave'} ({assignedUnits.length} Deployed)

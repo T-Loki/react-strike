@@ -6,7 +6,7 @@ import { UnitFactory } from '../factories/UnitFactory';
 import { UNIT_ROSTER } from '../../data/units';
 import { type WaveStrategy, SkirmishWave } from './WaveStrategy';
 import { DEPLOY_GRID_COLS } from '../factories/UnitFactory';
-import { getDistance, getDirection } from '../math/utils';
+import { getDirection } from '../math/utils';
 
 export class GameEngine {
   private static instance: GameEngine;
@@ -19,6 +19,8 @@ export class GameEngine {
   private animationFrameId: number | null = null;
   private lastTime: number = 0;
   private isPaused: boolean = false;
+  private gameSpeed: number = 1.0;
+  private isSurrendered: boolean = false;
 
   private canvasWidth: number = typeof window !== 'undefined' ? window.innerWidth : 1280;
   private canvasHeight: number = typeof window !== 'undefined' ? window.innerHeight : 720;
@@ -125,6 +127,7 @@ export class GameEngine {
     this.entities = [];
     this.damageTexts = [];
     this.attackEffects = [];
+    this.isSurrendered = false;
     this.battlePhase = 'HOLDING_POSITION';
     this.events.emit('clear');
   }
@@ -133,6 +136,13 @@ export class GameEngine {
     if (this.animationFrameId !== null) return;
     this.lastTime = performance.now();
     this.loop(this.lastTime);
+  }
+
+  public stop(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
   }
 
   public pause(): void {
@@ -187,9 +197,26 @@ export class GameEngine {
     }
   };
 
+  public getGameSpeed(): number {
+    return this.gameSpeed;
+  }
+
+  public setGameSpeed(speed: number): void {
+    this.gameSpeed = speed;
+  }
+
+  public surrenderBattle(): void {
+    this.isSurrendered = true;
+    this.battlePhase = 'SURRENDERED';
+    this.events.emit('tick', { deltaTime: 0 });
+  }
+
   private loop = (time: number) => {
-    const deltaTime = time - this.lastTime;
+    const rawDelta = time - this.lastTime;
     this.lastTime = time;
+
+    const clampedDelta = Math.min(rawDelta, 100);
+    const deltaTime = clampedDelta * this.gameSpeed;
 
     if (!this.isPaused) {
       this.update(deltaTime, time);
@@ -242,6 +269,11 @@ export class GameEngine {
   }
 
   private update(deltaTime: number, now: number): void {
+    if (this.isSurrendered) {
+      this.battlePhase = 'SURRENDERED';
+      return;
+    }
+
     const defenders = this.entities.filter(e => e.data.team === 'defender' && e.data.hp > 0);
     const horde = this.entities.filter(e => e.data.team === 'horde' && e.data.hp > 0);
 
@@ -282,8 +314,9 @@ export class GameEngine {
     const activeHorde = this.entities.filter(e => e.data.team === 'horde');
     const engageZoneWidth = this.canvasWidth * this.zoneConfig.playerAreaRatio;
     const hasBreachedHorde = activeHorde.some(h => h.data.x <= engageZoneWidth);
+    const hasReachedLeftEdge = activeHorde.some(h => h.data.x <= 25);
 
-    if (activeDefenders.length === 0 && activeHorde.length > 0) {
+    if ((activeDefenders.length === 0 && activeHorde.length > 0) || hasReachedLeftEdge) {
       this.battlePhase = 'DEFEAT';
     } else if (activeDefenders.length > 0 && activeHorde.length === 0) {
       this.battlePhase = 'VICTORY';

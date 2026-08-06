@@ -9,7 +9,7 @@ export const useGameEngine = () => {
     engine.start();
 
     return () => {
-      engine.destroy();
+      engine.stop();
     };
   }, []);
 

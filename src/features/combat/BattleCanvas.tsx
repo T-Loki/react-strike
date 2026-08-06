@@ -8,6 +8,7 @@ import { UNIT_ROSTER } from '../../data/units';
 import { EndlessDoomWave } from '../../core/engine/WaveStrategy';
 import { BattleCanvasRenderer } from './BattleCanvasRenderer';
 import { BattleCanvasOverlay } from './BattleCanvasOverlay';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface BattleCanvasProps {
   onBackToMap?: () => void;
@@ -85,7 +86,7 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
     { label: 'Horde Behemoth',    icon: '💀',  color: '#7f1d1d', stats: { name: 'Horde Behemoth',    hp: 300, maxHp: 300, damage: 30, speed: 40,  armor: 5 } },
   ] as const;
 
-  const spawnEnemies = (stats: typeof ENEMY_CATALOGUE[number]['stats'], count: number) => {
+  const spawnEnemies = (stats: Partial<Unit>, count: number) => {
     const { width, height } = engine.getCanvasSize();
     const marginY = 80;
     const availableH = Math.max(100, height - marginY * 2);
@@ -127,27 +128,29 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
   });
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans select-none">
-      <BattleCanvasRenderer 
-        selectedUnit={selectedUnit} 
-        setSelectedUnit={setSelectedUnit} 
-      />
-      
-      <BattleCanvasOverlay
-        hudStats={hudStats}
-        selectedUnit={selectedUnit}
-        setSelectedUnit={setSelectedUnit}
-        isPaused={isPaused}
-        togglePause={togglePause}
-        enemyMenuOpen={enemyMenuOpen}
-        setEnemyMenuOpen={setEnemyMenuOpen}
-        ENEMY_CATALOGUE={ENEMY_CATALOGUE}
-        spawnEnemies={spawnEnemies}
-        initBattlefield={initBattlefield}
-        onBackToMap={onBackToMap}
-        onNavigate={onNavigate}
-        isSandboxMode={isSandboxMode}
-      />
-    </div>
+    <ErrorBoundary>
+      <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans select-none">
+        <BattleCanvasRenderer 
+          selectedUnit={selectedUnit} 
+          setSelectedUnit={setSelectedUnit} 
+        />
+        
+        <BattleCanvasOverlay
+          hudStats={hudStats}
+          selectedUnit={selectedUnit}
+          setSelectedUnit={setSelectedUnit}
+          isPaused={isPaused}
+          togglePause={togglePause}
+          enemyMenuOpen={enemyMenuOpen}
+          setEnemyMenuOpen={setEnemyMenuOpen}
+          ENEMY_CATALOGUE={ENEMY_CATALOGUE}
+          spawnEnemies={spawnEnemies}
+          initBattlefield={initBattlefield}
+          onBackToMap={onBackToMap}
+          onNavigate={onNavigate}
+          isSandboxMode={isSandboxMode}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };

@@ -42,8 +42,8 @@ describe('Empire Management Logistics', () => {
     // Total available units initially is 13
     expect(screen.getByText(/Available Pool \(13\)/i)).toBeInTheDocument();
     
-    // Assigned initially is 0
-    expect(screen.getByText(/Assigned \(0\)/i)).toBeInTheDocument();
+    // Assigned initially is 3 (3 initial garrison soldier defenders)
+    expect(screen.getByText(/Assigned \(3\)/i)).toBeInTheDocument();
 
     // Find allocate buttons (+)
     const allocateButtons = container.querySelectorAll('button[title="Assign to territory"]');
@@ -51,8 +51,8 @@ describe('Empire Management Logistics', () => {
       fireEvent.click(allocateButtons[0]);
     }
 
-    // Now assigned is 1, available is 12
-    expect(screen.getByText(/Assigned \(1\)/i)).toBeInTheDocument();
+    // Now assigned is 4, available is 12
+    expect(screen.getByText(/Assigned \(4\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Available Pool \(12\)/i)).toBeInTheDocument();
 
     // Deallocate
@@ -61,7 +61,53 @@ describe('Empire Management Logistics', () => {
       fireEvent.click(deallocateButtons[0]);
     }
 
-    expect(screen.getByText(/Assigned \(0\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Assigned \(3\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Available Pool \(13\)/i)).toBeInTheDocument();
+  });
+
+  it('allows upgrading buildings from territory drawer', () => {
+    render(
+      <CampaignProvider>
+        <EmpireManagement />
+      </CampaignProvider>
+    );
+
+    // Territory drawer shows town infrastructure & upgrade buttons
+    const upgradeButtons = screen.getAllByText(/Upgrade:/i);
+    expect(upgradeButtons.length).toBeGreaterThan(0);
+
+    // Initial Gold is 500
+    expect(screen.getByText(/Gold: 500/i)).toBeInTheDocument();
+
+    // Click upgrade
+    fireEvent.click(upgradeButtons[0]);
+
+    // Gold decreases by upgrade cost (100 for Scavenger Farmstead)
+    expect(screen.getByText(/Gold: 400/i)).toBeInTheDocument();
+  });
+
+  it('opens Empire Emporium and purchases emergency decree', () => {
+    render(
+      <CampaignProvider>
+        <EmpireManagement />
+      </CampaignProvider>
+    );
+
+    // Open Emporium
+    const emporiumBtn = screen.getByText(/Empire Emporium/i);
+    fireEvent.click(emporiumBtn);
+
+    // Check Emporium modal opened
+    expect(screen.getByText(/Empire Emporium & Grand Sanctuary/i)).toBeInTheDocument();
+    expect(screen.getByText(/Emergency Decrees/i)).toBeInTheDocument();
+
+    // Find Enact Decree button for Conscription Drive (cost 150 gold)
+    const enactButtons = screen.getAllByText(/Enact Decree/i);
+    expect(enactButtons.length).toBeGreaterThan(0);
+
+    fireEvent.click(enactButtons[0]);
+
+    // Gold should decrease from 500 to 350
+    expect(screen.getByText(/350 Gold/i)).toBeInTheDocument();
   });
 });

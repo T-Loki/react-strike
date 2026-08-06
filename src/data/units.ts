@@ -1,5 +1,32 @@
 import type { UnitTemplate } from '../types/combat';
 
+export const GARRISON_SOLDIER: UnitTemplate = {
+  id: 'unit_garrison_soldier',
+  name: 'Garrison Soldier',
+  type: 'common',
+  hp: 100,
+  maxHp: 100,
+  damage: 12,
+  range: 50,
+  attackSpeed: 1.0,
+  cost: 0,
+  abilities: ['Fixed Garrison'],
+};
+
+export const CITY_MILITIA: UnitTemplate = {
+  id: 'unit_city_militia',
+  name: 'City Militia',
+  type: 'common',
+  hp: 75,
+  maxHp: 75,
+  damage: 10,
+  range: 50,
+  attackSpeed: 1.0,
+  cost: 0,
+  abilities: ['Fixed Garrison'],
+};
+
+
 export const UNIT_ROSTER: UnitTemplate[] = [
   {
     id: 'unit_vanguard_spearman',

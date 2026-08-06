@@ -58,3 +58,7 @@
 1. **Mandatory Test Verification**: Every new feature or balance tweak MUST pass the Vitest suite (`npm run test`).
 2. **Context & Math Test Protection**: Any changes to `CampaignContext.tsx`, `updateFrontlines()`, or combat formulas require updating or adding corresponding unit tests in `src/tests/`.
 3. **Zero-Regression Bar**: Never mark a task as complete if `npm run test` reports failing assertions.
+
+## Strict Typing Rules
+1. **The 'any' Purge**: The use of explicit or implicit `any` types is strictly forbidden across the codebase.
+2. **Domain Interfaces**: Use strict interfaces for all component props, state objects, and combat payload structures. This is critical for preventing cross-domain pollution (e.g. leaking React DOM data into Canvas memory).

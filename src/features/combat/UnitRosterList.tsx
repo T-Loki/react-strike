@@ -1,16 +1,28 @@
 import React from 'react';
 import { Layers, Infinity, UserCheck } from 'lucide-react';
 
+import type { UnitTemplate } from '../../types/combat';
+
+export type StackEntry = {
+  name: string;
+  type: string;
+  hp: number;
+  damage: number;
+  units: UnitTemplate[];
+  infinite: boolean;
+  template?: UnitTemplate;
+};
+
 interface Props {
   isSandboxMode: boolean;
-  unassignedUnits: any[];
-  assignedUnits: any[];
-  displayStacks: any[];
+  unassignedUnits: UnitTemplate[];
+  assignedUnits: UnitTemplate[];
+  displayStacks: StackEntry[];
   selectionLabel: string | null;
   isSandboxSelection: boolean;
   sandboxSelectedName: string | null;
-  selectedUnit: any;
-  handleStackClick: (stack: any) => void;
+  selectedUnit: UnitTemplate | undefined;
+  handleStackClick: (stack: StackEntry) => void;
   handleClearAll: () => void;
 }
 
