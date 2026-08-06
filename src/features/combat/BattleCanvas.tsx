@@ -15,6 +15,8 @@ interface BattleCanvasProps {
   onNavigate?: (view: GameState) => void;
   isSandboxMode?: boolean;
   sandboxPool?: import('../../types/combat').UnitTemplate[];
+  onSurrenderCity?: () => void;
+  onVictoryComplete?: () => void;
 }
 
 export const BattleCanvas: React.FC<BattleCanvasProps> = ({
@@ -22,6 +24,8 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
   onNavigate,
   isSandboxMode = false,
   sandboxPool = [],
+  onSurrenderCity,
+  onVictoryComplete,
 }) => {
   const engine = useGameEngine();
   const { territories } = useCampaign();
@@ -69,9 +73,14 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
     setSelectedUnit(null);
   }, [activeTerritory, engine, isSandboxMode, sandboxPool]);
 
+  const hasStartedRef = useRef(false);
+
   useEffect(() => {
-    initBattlefield();
-  }, [initBattlefield]);
+    if (!hasStartedRef.current) {
+      hasStartedRef.current = true;
+      initBattlefield();
+    }
+  }, []);
 
   const togglePause = () => {
     engine.togglePause();
@@ -141,6 +150,9 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
           setSelectedUnit={setSelectedUnit}
           isPaused={isPaused}
           togglePause={togglePause}
+          gameSpeed={engine.getGameSpeed()}
+          setGameSpeed={(s) => engine.setGameSpeed(s)}
+          onSurrenderBattle={() => engine.surrenderBattle()}
           enemyMenuOpen={enemyMenuOpen}
           setEnemyMenuOpen={setEnemyMenuOpen}
           ENEMY_CATALOGUE={ENEMY_CATALOGUE}
@@ -149,6 +161,8 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
           onBackToMap={onBackToMap}
           onNavigate={onNavigate}
           isSandboxMode={isSandboxMode}
+          onSurrenderCity={onSurrenderCity}
+          onVictoryComplete={onVictoryComplete}
         />
       </div>
     </ErrorBoundary>

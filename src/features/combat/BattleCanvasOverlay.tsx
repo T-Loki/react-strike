@@ -221,7 +221,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
                       <p className="text-xs font-bold text-white truncate">{entry.label}</p>
                       <p className="text-[10px] text-slate-500 font-mono">
                         HP {entry.stats.hp} · DMG {entry.stats.damage} · SPD {entry.stats.speed}
-                        {entry.stats.armor > 0 ? ` · ARM ${entry.stats.armor}` : ''}
+                        {(entry.stats.armor ?? 0) > 0 ? ` · ARM ${entry.stats.armor}` : ''}
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">
