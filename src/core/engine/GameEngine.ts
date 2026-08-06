@@ -1,0 +1,307 @@
+import { EventBus } from '../events/EventBus';
+import type { Unit, DamageText, AttackEffect, BattlePhase, UnitTemplate, BattlefieldZoneConfig } from '../../types/combat';
+import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
+import { UnitEntity, type SimulationContext } from '../entities/UnitEntity';
+import { UnitFactory } from '../factories/UnitFactory';
+import { UNIT_ROSTER } from '../../data/units';
+import { type WaveStrategy, SkirmishWave } from './WaveStrategy';
+
+export class GameEngine {
+  private static instance: GameEngine;
+  public events: EventBus;
+  
+  private entities: UnitEntity[] = [];
+  private damageTexts: DamageText[] = [];
+  private attackEffects: AttackEffect[] = [];
+  
+  private animationFrameId: number | null = null;
+  private lastTime: number = 0;
+  private isPaused: boolean = false;
+
+  private canvasWidth: number = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  private canvasHeight: number = typeof window !== 'undefined' ? window.innerHeight : 720;
+  private battlePhase: BattlePhase = 'HOLDING_POSITION';
+  private zoneConfig: BattlefieldZoneConfig = DEFAULT_BATTLEFIELD_ZONES;
+
+  private constructor() {
+    this.events = new EventBus();
+  }
+
+  public static getInstance(): GameEngine {
+    if (!GameEngine.instance) {
+      GameEngine.instance = new GameEngine();
+    }
+    return GameEngine.instance;
+  }
+
+  public setCanvasSize(width: number, height: number): void {
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+  }
+
+  public getCanvasSize(): { width: number; height: number } {
+    return { width: this.canvasWidth, height: this.canvasHeight };
+  }
+
+  public setZoneConfig(config: BattlefieldZoneConfig): void {
+    this.zoneConfig = config;
+  }
+
+  public getZoneConfig(): BattlefieldZoneConfig {
+    return this.zoneConfig;
+  }
+
+  public getEntities(): UnitEntity[] {
+    return this.entities;
+  }
+
+  public getDefenders(): Unit[] {
+    return this.entities.filter(e => e.data.team === 'defender' && e.data.hp > 0).map(e => e.data);
+  }
+
+  public getHorde(): Unit[] {
+    return this.entities.filter(e => e.data.team === 'horde' && e.data.hp > 0).map(e => e.data);
+  }
+
+  public getDamageTexts(): DamageText[] {
+    return this.damageTexts;
+  }
+
+  public getAttackEffects(): AttackEffect[] {
+    return this.attackEffects;
+  }
+
+  public getBattlePhase(): BattlePhase {
+    if (this.isPaused) return 'PAUSED';
+    return this.battlePhase;
+  }
+
+  public spawnDefender(x: number, y: number, template?: Partial<Unit>): void {
+    const data = UnitFactory.createDefender(x, y, template);
+    this.entities.push(new UnitEntity(data));
+    this.events.emit('spawn', data);
+  }
+
+  public spawnHorde(x: number, y: number, template?: Partial<Unit>): void {
+    const data = UnitFactory.createHorde(x, y, template);
+    this.entities.push(new UnitEntity(data));
+    this.events.emit('spawn', data);
+  }
+
+  public loadFormation(templates: UnitTemplate[]): void {
+    this.clearBoard();
+    const placed = templates.filter(t => t.gridPosition !== undefined);
+    
+    if (placed.length > 0) {
+      placed.forEach(t => {
+        const defenderUnit = UnitFactory.fromTemplate(t, this.canvasWidth, this.canvasHeight, this.zoneConfig);
+        this.entities.push(new UnitEntity(defenderUnit));
+      });
+    } else {
+      const rosterToUse = UNIT_ROSTER.length > 0 ? UNIT_ROSTER : [
+        { id: '1', name: 'Vanguard Spearman', type: 'common' as const, hp: 120, maxHp: 120, damage: 15, range: 60, attackSpeed: 1, cost: 50, abilities: [] },
+        { id: '2', name: 'Iron Crossbow', type: 'common' as const, hp: 80, maxHp: 80, damage: 25, range: 200, attackSpeed: 0.8, cost: 75, abilities: [] },
+        { id: '3', name: 'Aric the Shieldbreaker', type: 'hero' as const, hp: 500, maxHp: 500, damage: 40, range: 50, attackSpeed: 1, cost: 300, abilities: [] }
+      ];
+
+      rosterToUse.forEach((tmpl, i) => {
+        const gridPos = { x: i % 4, y: Math.floor(i / 4) * 2 + 1 };
+        const defenderUnit = UnitFactory.fromTemplate({ ...tmpl, gridPosition: gridPos }, this.canvasWidth, this.canvasHeight, this.zoneConfig);
+        this.entities.push(new UnitEntity(defenderUnit));
+      });
+    }
+  }
+
+  public spawnHordeWave(strategy?: WaveStrategy, count?: number): void {
+    const waveStrategy = strategy || new SkirmishWave();
+    waveStrategy.spawnWave(this, count);
+  }
+
+  public clearBoard(): void {
+    this.entities = [];
+    this.damageTexts = [];
+    this.attackEffects = [];
+    this.battlePhase = 'HOLDING_POSITION';
+    this.events.emit('clear');
+  }
+
+  public start(): void {
+    if (this.animationFrameId !== null) return;
+    this.lastTime = performance.now();
+    this.loop(this.lastTime);
+  }
+
+  public pause(): void {
+    this.isPaused = true;
+    this.events.emit('pause');
+  }
+
+  public resume(): void {
+    this.isPaused = false;
+    this.lastTime = performance.now();
+    this.events.emit('resume');
+  }
+
+  public togglePause(): void {
+    if (this.isPaused) this.resume();
+    else this.pause();
+  }
+
+  public getIsPaused(): boolean {
+    return this.isPaused;
+  }
+
+  private handleDealDamage = (attacker: Unit, target: Unit, damage: number) => {
+    if (isNaN(damage) || damage < 0) damage = 0;
+    target.hp = Math.max(0, target.hp - damage);
+
+    this.damageTexts.push({
+      id: `dmg-${Math.random().toString(36).substring(2, 9)}`,
+      x: target.x + (Math.random() * 16 - 8),
+      y: target.y - 12,
+      text: `-${damage}`,
+      opacity: 1.0,
+      color: attacker.team === 'defender' ? '#fef08a' : '#f87171',
+      lifetime: 0,
+      maxLifetime: 800,
+    });
+
+    this.attackEffects.push({
+      id: `eff-${Math.random().toString(36).substring(2, 9)}`,
+      startX: attacker.x,
+      startY: attacker.y,
+      endX: target.x,
+      endY: target.y,
+      duration: 120,
+      maxDuration: 120,
+      color: attacker.team === 'defender' ? '#38bdf8' : '#ef4444',
+    });
+
+    if (target.hp <= 0) {
+      this.events.emit('death', target);
+    }
+  };
+
+  private loop = (time: number) => {
+    const deltaTime = time - this.lastTime;
+    this.lastTime = time;
+
+    if (!this.isPaused) {
+      this.update(deltaTime, time);
+    }
+
+    this.events.emit('tick', { deltaTime });
+    this.animationFrameId = requestAnimationFrame(this.loop);
+  };
+
+  private resolveUnitCollisions(): void {
+    const activeEntities = this.entities.filter(e => e.data.hp > 0);
+    const count = activeEntities.length;
+
+    for (let iter = 0; iter < 2; iter++) {
+      for (let i = 0; i < count; i++) {
+        const u1 = activeEntities[i];
+        const isHero1 = u1.data.name.toLowerCase().includes('aric') || u1.data.color === '#f59e0b';
+        const r1 = isHero1 ? 14 : 10;
+
+        for (let j = i + 1; j < count; j++) {
+          const u2 = activeEntities[j];
+          const isHero2 = u2.data.name.toLowerCase().includes('aric') || u2.data.color === '#f59e0b';
+          const r2 = isHero2 ? 14 : 10;
+
+          const minDist = r1 + r2 + 4;
+          let dx = u1.data.x - u2.data.x;
+          let dy = u1.data.y - u2.data.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < minDist) {
+            if (dist < 0.001) {
+              const angle = Math.random() * Math.PI * 2;
+              dx = Math.cos(angle);
+              dy = Math.sin(angle);
+              dist = 1;
+            }
+
+            const overlap = minDist - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            const pushAmount = overlap * 0.5;
+
+            u1.data.x += nx * pushAmount;
+            u1.data.y += ny * pushAmount;
+
+            u2.data.x -= nx * pushAmount;
+            u2.data.y -= ny * pushAmount;
+          }
+        }
+      }
+
+      activeEntities.forEach(e => e.clampPosition(this.canvasWidth, this.canvasHeight, this.zoneConfig));
+    }
+  }
+
+  private update(deltaTime: number, now: number): void {
+    const defenders = this.entities.filter(e => e.data.team === 'defender' && e.data.hp > 0);
+    const horde = this.entities.filter(e => e.data.team === 'horde' && e.data.hp > 0);
+
+    const context: SimulationContext = {
+      canvasWidth: this.canvasWidth,
+      canvasHeight: this.canvasHeight,
+      defenders,
+      horde,
+      onDealDamage: this.handleDealDamage,
+      now,
+      zoneConfig: this.zoneConfig,
+    };
+
+    this.entities.forEach(entity => {
+      if (entity.data.hp > 0) {
+        entity.update(deltaTime, context);
+      }
+    });
+
+    this.resolveUnitCollisions();
+
+    this.entities = this.entities.filter(e => e.data.hp > 0);
+
+    const deltaTimeSec = deltaTime / 1000;
+    this.damageTexts.forEach(dt => {
+      dt.lifetime += deltaTime;
+      dt.y -= 25 * deltaTimeSec;
+      dt.opacity = Math.max(0, 1 - dt.lifetime / dt.maxLifetime);
+    });
+    this.damageTexts = this.damageTexts.filter(dt => dt.lifetime < dt.maxLifetime);
+
+    this.attackEffects.forEach(eff => {
+      eff.duration -= deltaTime;
+    });
+    this.attackEffects = this.attackEffects.filter(eff => eff.duration > 0);
+
+    const activeDefenders = this.entities.filter(e => e.data.team === 'defender');
+    const activeHorde = this.entities.filter(e => e.data.team === 'horde');
+    const engageZoneWidth = this.canvasWidth * this.zoneConfig.playerAreaRatio;
+    const hasBreachedHorde = activeHorde.some(h => h.data.x <= engageZoneWidth);
+
+    if (activeDefenders.length === 0 && activeHorde.length > 0) {
+      this.battlePhase = 'DEFEAT';
+    } else if (activeDefenders.length > 0 && activeHorde.length === 0) {
+      this.battlePhase = 'VICTORY';
+    } else if (hasBreachedHorde) {
+      this.battlePhase = 'ENGAGING_ENEMY';
+    } else {
+      this.battlePhase = 'HOLDING_POSITION';
+    }
+  }
+
+  public destroy(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.events.clear();
+    this.entities = [];
+    this.damageTexts = [];
+    this.attackEffects = [];
+  }
+}

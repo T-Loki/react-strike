@@ -18,13 +18,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
   const { settings, updateSettings } = useSettings();
 
   return (
-    <div className="h-screen w-full overflow-y-auto overflow-x-hidden">
-      <div className="min-h-full flex items-center justify-center relative p-6 py-12">
+    <div className="w-full h-full bg-slate-950 text-slate-100 flex flex-col">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 flex items-center justify-center relative">
         <div className="absolute inset-0 z-0 flex items-center justify-center opacity-10 pointer-events-none">
            <div className="w-[600px] h-[600px] rounded-full bg-[var(--accent-color)] blur-[120px]"></div>
         </div>
 
-        <div className="z-10 flex flex-col w-full max-w-2xl p-10 theme-panel rounded-2xl backdrop-blur-md my-auto">
+        <div className="z-10 flex flex-col w-full max-w-2xl p-10 theme-panel rounded-2xl backdrop-blur-md">
         <div className="flex items-center justify-between mb-8 border-b border-[var(--border-color)] pb-6">
           <h2 className="text-3xl font-black tracking-widest uppercase text-[var(--accent-color)] flex items-center gap-3">
             <Monitor className="w-8 h-8" />

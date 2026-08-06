@@ -2,6 +2,17 @@ import React, { useState } from 'react';
 import type { GameState } from '../types/game';
 import { Sword, Settings as SettingsIcon, LogOut } from 'lucide-react';
 
+declare global {
+  interface Window {
+    __TAURI__?: {
+      process: { exit: () => void };
+    };
+    electron?: {
+      ipcRenderer: { send: (channel: string, ...args: unknown[]) => void };
+    };
+  }
+}
+
 interface MainMenuProps {
   onNavigate: (view: GameState) => void;
 }
@@ -11,11 +22,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onNavigate }) => {
 
   const handleExit = () => {
     // Check if running in a desktop shell (Tauri/Electron)
-    if ((window as any).__TAURI__ || (window as any).electron) {
-      if ((window as any).__TAURI__) {
-         (window as any).__TAURI__.process.exit();
-      } else {
-         (window as any).electron.ipcRenderer.send('app-quit');
+    if (window.__TAURI__ || window.electron) {
+      if (window.__TAURI__) {
+         window.__TAURI__.process.exit();
+      } else if (window.electron) {
+         window.electron.ipcRenderer.send('app-quit');
       }
     } else {
       // Browser tab close attempt

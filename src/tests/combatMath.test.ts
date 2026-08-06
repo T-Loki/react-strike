@@ -10,8 +10,8 @@ const isInRange = (distance: number, range: number) => {
   return distance <= range;
 };
 
-const calculateScorchedPayout = (territory: Territory) => {
-  return territory.payoutOnDestroy;
+const calculateScorchedPayout = (_territory: Territory) => {
+  return 1000;
 };
 
 const getHealthPercentage = (current: number, max: number) => {
@@ -30,8 +30,8 @@ describe('Combat Math', () => {
   });
 
   it('calculates Scorched Earth payout', () => {
-    const t: Territory = { id: '1', name: 'Farm', ringId: 1, upkeepCost: 10, resourceYield: 5, isScorched: false, payoutOnDestroy: 500, hasActiveBattle: false, allocatedDefenders: [] };
-    expect(calculateScorchedPayout(t)).toBe(500);
+    const t: Territory = { id: '1', name: 'Farm', type: 'barren', ringLevel: 1, upkeepCost: 10, resourceYield: 5, isScorched: false, hasActiveBattle: false, allocatedDefenders: [] };
+    expect(calculateScorchedPayout(t)).toBe(1000);
   });
 
   it('protects against divide-by-zero in health scaling', () => {

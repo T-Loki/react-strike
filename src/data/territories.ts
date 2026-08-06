@@ -1,0 +1,48 @@
+import type { Territory } from '../types/combat';
+
+export const INITIAL_TERRITORIES: Territory[] = [
+  {
+    id: 'terr_outer_fields',
+    name: 'Outer Barren Fields',
+    type: 'barren',
+    ringLevel: 3,
+    resourceYield: 10,
+    upkeepCost: 5,
+    isScorched: false,
+    hasActiveBattle: false,
+    allocatedDefenders: [],
+  },
+  {
+    id: 'terr_merchant_slums',
+    name: 'Merchant Slums',
+    type: 'merchant',
+    ringLevel: 2,
+    resourceYield: 50,
+    upkeepCost: 15,
+    isScorched: false,
+    hasActiveBattle: false,
+    allocatedDefenders: [],
+  },
+  {
+    id: 'terr_inner_fortress',
+    name: 'Inner Fortress Ring',
+    type: 'fortress',
+    ringLevel: 1,
+    resourceYield: 0,
+    upkeepCost: 30,
+    isScorched: false,
+    hasActiveBattle: false,
+    allocatedDefenders: [],
+  },
+  {
+    id: 'terr_valhalla',
+    name: 'Valhalla Citadel',
+    type: 'citadel',
+    ringLevel: 0,
+    resourceYield: 100,
+    upkeepCost: 100,
+    isScorched: false,
+    hasActiveBattle: false,
+    allocatedDefenders: [],
+  },
+];
