@@ -4,6 +4,7 @@
 1. **Separation of Renderers**:
    * HTML5 `<canvas>` handles real-time unit movement, combat math, and 60 FPS sprite drawing via `requestAnimationFrame`.
    * React DOM components handle menus, HUD, wave triggers, and unit shop controls.
+   * **Component Decomposition**: Complex views must be strictly divided by responsibility (e.g. `BattleCanvas` is decomposed into `BattleCanvasRenderer` for the canvas and `BattleCanvasOverlay` for the React HUD. `PreBattleSetup` is decomposed into `FormationGrid` and `UnitRosterList`).
 2. **State Management**:
    * NEVER store 60 FPS combat unit arrays inside React `useState`. Store combat unit data in pure JavaScript `useRef` arrays to avoid Virtual DOM re-rendering lag.
 3. **UI Aesthetics**:
@@ -53,6 +54,7 @@
 2. **Page-Level Scrolling**: Full-page views (`EmpireManagement`, `PreBattleSetup`, etc.) must use a `flex flex-col h-full` layout where the top header is `flex-shrink-0` and the main body container is `flex-1 overflow-y-auto`. Never apply isolated `overflow-y-auto` to tiny child components if the page itself clips off-screen.
 3. **Sandbox Testing Bridge**: Any unit formation placed in `PreBattleSetup` must be testable inside `SandboxCanvas.tsx` via `activeBattleTerritoryId`.
 
-## Testing Guidelines
-1. **Sandbox QA**: New combat mechanics must be manually testable in `SandboxCanvas.tsx`.
-2. **Automated Verification**: Run `npx vitest run` before finalizing tasks to ensure zero mathematical regressions.
+## Automated Testing & Regression Safety Rules
+1. **Mandatory Test Verification**: Every new feature or balance tweak MUST pass the Vitest suite (`npm run test`).
+2. **Context & Math Test Protection**: Any changes to `CampaignContext.tsx`, `updateFrontlines()`, or combat formulas require updating or adding corresponding unit tests in `src/tests/`.
+3. **Zero-Regression Bar**: Never mark a task as complete if `npm run test` reports failing assertions.

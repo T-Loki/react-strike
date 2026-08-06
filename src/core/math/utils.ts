@@ -7,3 +7,12 @@ export const getDirection = (x1: number, y1: number, x2: number, y2: number): { 
   if (dist === 0) return { dx: 0, dy: 0, dist: 0 };
   return { dx: (x2 - x1) / dist, dy: (y2 - y1) / dist, dist };
 };
+
+export const isInRange = (distance: number, range: number): boolean => {
+  return distance <= range;
+};
+
+export const getHealthPercentage = (current: number, max: number): number => {
+  if (max <= 0) return 0;
+  return (current / max) * 100;
+};

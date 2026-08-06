@@ -24,7 +24,7 @@ interface CampaignContextType extends CampaignState {
   scorchTerritory: (id: string) => void;
   allocateUnitToTerritory: (territoryId: string, unitId: string) => void;
   deallocateUnitFromTerritory: (territoryId: string, unitId: string) => void;
-  updateUnitGridPosition: (territoryId: string, unitId: string, gridPos?: { x: number; y: number }) => void;
+  updateUnitGridPosition: (territoryId: string, unitId: string, gridPos?: { x: number; y: number }, customTemplate?: UnitTemplate) => void;
 }
 
 const CampaignContext = createContext<CampaignContextType | undefined>(undefined);
@@ -34,8 +34,8 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   // Initialize with unique IDs for units
   const initialPool: UnitTemplate[] = [
-    ...Array.from({ length: 5 }, (_, i) => ({ ...UNIT_ROSTER[0], id: `spearman_${i + 1}` })),
-    ...Array.from({ length: 5 }, (_, i) => ({ ...UNIT_ROSTER[1], id: `crossbow_${i + 1}` })),
+    ...Array.from({ length: 6 }, (_, i) => ({ ...UNIT_ROSTER[0], id: `spearman_${i + 1}` })),
+    ...Array.from({ length: 6 }, (_, i) => ({ ...UNIT_ROSTER[1], id: `crossbow_${i + 1}` })),
     { ...UNIT_ROSTER[2], id: `hero_aric` }
   ];
   
@@ -88,11 +88,13 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const deallocateUnitFromTerritory = (territoryId: string, unitId: string) => {
-    let unitToReturn: UnitTemplate | undefined;
+    const territory = territories.find(t => t.id === territoryId);
+    const unitToReturn = territory?.allocatedDefenders.find(u => u.id === unitId);
+
+    if (!unitToReturn) return;
 
     setTerritories(prev => prev.map(t => {
       if (t.id === territoryId) {
-        unitToReturn = t.allocatedDefenders.find(u => u.id === unitId);
         return {
           ...t,
           allocatedDefenders: t.allocatedDefenders.filter(u => u.id !== unitId)
@@ -101,28 +103,36 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
       return t;
     }));
 
-    if (unitToReturn) {
-      const returnedUnit = unitToReturn;
-      setGlobalUnitPool(prev => [...prev, { ...returnedUnit, gridPosition: undefined }]);
-    }
+    setGlobalUnitPool(prev => [...prev, { ...unitToReturn, gridPosition: undefined }]);
   };
 
-  const updateUnitGridPosition = (territoryId: string, unitId: string, gridPos?: { x: number; y: number }) => {
+  const updateUnitGridPosition = (
+    territoryId: string, 
+    unitId: string, 
+    gridPos?: { x: number; y: number },
+    customTemplate?: UnitTemplate
+  ) => {
     setTerritories(prev => prev.map(t => {
       if (t.id === territoryId) {
         const unitExists = t.allocatedDefenders.some(u => u.id === unitId);
         let updatedDefenders: UnitTemplate[];
         if (unitExists) {
-          updatedDefenders = t.allocatedDefenders.map(u => {
-            if (u.id === unitId) {
-              return { ...u, gridPosition: gridPos };
-            }
-            return u;
-          });
+          if (gridPos === undefined && unitId.startsWith('sandbox_')) {
+            updatedDefenders = t.allocatedDefenders.filter(u => u.id !== unitId);
+          } else {
+            updatedDefenders = t.allocatedDefenders.map(u => {
+              if (u.id === unitId) {
+                return { ...u, gridPosition: gridPos };
+              }
+              return u;
+            });
+          }
         } else {
-          const sourceUnit = globalUnitPool.find(u => u.id === unitId) || UNIT_ROSTER.find(u => u.id === unitId);
+          const sourceUnit = customTemplate || 
+            globalUnitPool.find(u => u.id === unitId) || 
+            UNIT_ROSTER.find(u => u.id === unitId || unitId.includes(u.id));
           if (sourceUnit) {
-            updatedDefenders = [...t.allocatedDefenders, { ...sourceUnit, gridPosition: gridPos }];
+            updatedDefenders = [...t.allocatedDefenders, { ...sourceUnit, id: unitId, gridPosition: gridPos }];
           } else {
             updatedDefenders = t.allocatedDefenders;
           }

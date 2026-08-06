@@ -9,7 +9,9 @@ export interface GameEventPayloads {
   resume: void;
 }
 
-export type EventCallback<K extends keyof GameEventPayloads> = (payload?: GameEventPayloads[K]) => void;
+export type EventCallback<K extends keyof GameEventPayloads> = (
+  ...args: GameEventPayloads[K] extends void ? [] : [GameEventPayloads[K]]
+) => void;
 
 export class EventBus {
   private listeners: { [K in keyof GameEventPayloads]?: EventCallback<K>[] } = {};
@@ -27,9 +29,12 @@ export class EventBus {
     Object.assign(this.listeners, { [event]: array.filter(cb => cb !== callback) });
   }
 
-  emit<K extends keyof GameEventPayloads>(event: K, payload?: GameEventPayloads[K]): void {
+  emit<K extends keyof GameEventPayloads>(
+    event: K,
+    ...args: GameEventPayloads[K] extends void ? [] : [GameEventPayloads[K]]
+  ): void {
     if (!this.listeners[event]) return;
-    this.listeners[event]!.forEach(cb => cb(payload));
+    this.listeners[event]!.forEach(cb => (cb as any)(...args));
   }
 
   clear(): void {

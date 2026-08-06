@@ -181,8 +181,8 @@ export class AttackState implements UnitBehaviorState {
       unit.lastAttackTime = context.now;
       unit.attackAnimTimer = 150;
 
-      const rawDamage = unit.damage;
-      const targetArmor = targetUnit.armor || 0;
+      const rawDamage = isNaN(unit.damage) ? 0 : unit.damage;
+      const targetArmor = isNaN(targetUnit.armor || 0) ? 0 : (targetUnit.armor || 0);
       const actualDamage = Math.max(1, rawDamage - targetArmor);
 
       context.onDealDamage(unit, targetUnit, actualDamage);

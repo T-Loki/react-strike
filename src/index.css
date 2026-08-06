@@ -90,3 +90,69 @@
   scrollbar-width: thin;
   scrollbar-color: #334155 #020617;
 }
+
+/* ── Custom Volume Sliders ─────────────────────────────────────────── */
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--accent-color) 0%,
+    var(--accent-color) var(--slider-pct, 100%),
+    rgba(255,255,255,0.08) var(--slider-pct, 100%),
+    rgba(255,255,255,0.08) 100%
+  );
+  transition: opacity 0.2s ease;
+}
+.volume-slider:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+/* Webkit thumb */
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.6), 0 0 10px var(--accent-color);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.volume-slider:not(:disabled)::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.6), 0 0 18px var(--accent-color);
+}
+/* Firefox thumb */
+.volume-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.6), 0 0 10px var(--accent-color);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.volume-slider:not(:disabled)::-moz-range-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.6), 0 0 18px var(--accent-color);
+}
+/* Master slider — slightly taller track */
+.volume-slider-master {
+  height: 8px;
+}
+.volume-slider-master::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+}
+.volume-slider-master::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+}

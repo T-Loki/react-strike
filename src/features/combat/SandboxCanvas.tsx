@@ -1,6 +1,8 @@
 import React from 'react';
 import type { GameState } from '../../types/game';
 import { BattleCanvas } from './BattleCanvas';
+import { useCampaign } from '../../context/CampaignContext';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface SandboxCanvasProps {
   onNavigate: (view: GameState) => void;
@@ -12,10 +14,18 @@ export const SandboxCanvas: React.FC<SandboxCanvasProps> = ({
   onNavigate, 
   onBackToPlanning 
 }) => {
+  const { globalUnitPool } = useCampaign();
+
   return (
-    <BattleCanvas 
-      onBackToMap={onBackToPlanning}
-      onNavigate={onNavigate}
-    />
+    <ErrorBoundary>
+      <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans select-none">
+        <BattleCanvas 
+          onBackToMap={onBackToPlanning}
+          onNavigate={onNavigate}
+          isSandboxMode={true}
+          sandboxPool={globalUnitPool}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };

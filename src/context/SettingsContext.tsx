@@ -8,8 +8,14 @@ interface SettingsContextType {
 
 const defaultSettings: Settings = {
   masterVolume: 100,
+  sfxVolume: 100,
+  characterVolume: 100,
+  bgmVolume: 100,
   isMuted: false,
-  theme: 'dark-fantasy',
+  isSfxMuted: false,
+  isCharacterMuted: false,
+  isBgmMuted: false,
+  theme: 'slate',
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -19,7 +25,20 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('direct-strike-settings');
     if (saved) {
       try {
-        return { ...defaultSettings, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved) as Partial<Settings>;
+        // Merge field-by-field with nullish coalescing so stale saves
+        // never produce undefined for newly added fields.
+        return {
+          masterVolume: parsed.masterVolume ?? defaultSettings.masterVolume,
+          sfxVolume: parsed.sfxVolume ?? defaultSettings.sfxVolume,
+          characterVolume: parsed.characterVolume ?? defaultSettings.characterVolume,
+          bgmVolume: parsed.bgmVolume ?? defaultSettings.bgmVolume,
+          isMuted: parsed.isMuted ?? defaultSettings.isMuted,
+          isSfxMuted: parsed.isSfxMuted ?? defaultSettings.isSfxMuted,
+          isCharacterMuted: parsed.isCharacterMuted ?? defaultSettings.isCharacterMuted,
+          isBgmMuted: parsed.isBgmMuted ?? defaultSettings.isBgmMuted,
+          theme: parsed.theme ?? defaultSettings.theme,
+        };
       } catch (e) {
         return defaultSettings;
       }

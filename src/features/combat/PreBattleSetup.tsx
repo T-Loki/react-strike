@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useCampaign } from '../../context/CampaignContext';
 import type { GameState } from '../../types/game';
 import type { UnitTemplate } from '../../types/combat';
-import { Shield, Play, ArrowLeft, FlaskConical, X, Sparkles, UserCheck, Layers } from 'lucide-react';
+import { Shield, Play, ArrowLeft, FlaskConical, X, Sparkles, UserCheck, Layers, Infinity } from 'lucide-react';
 import { UNIT_ROSTER } from '../../data/units';
+import { FormationGrid } from './FormationGrid';
+import { UnitRosterList } from './UnitRosterList';
 
 interface Props {
   onStartBattle?: () => void;
@@ -12,8 +14,8 @@ interface Props {
   isSandboxMode?: boolean;
 }
 
-const GRID_COLS = 8;
-const GRID_ROWS = 6;
+// Non-hero unit templates used for the sandbox infinite bench
+const SANDBOX_INFINITE_UNITS: UnitTemplate[] = UNIT_ROSTER.filter(u => u.type !== 'hero');
 
 export const PreBattleSetup: React.FC<Props> = ({ 
   onStartBattle, 
@@ -22,11 +24,18 @@ export const PreBattleSetup: React.FC<Props> = ({
   isSandboxMode = false 
 }) => {
   const { territories, globalUnitPool, updateUnitGridPosition } = useCampaign();
+  // In sandbox mode, selectedUnitId may refer to either a real pool unit or a
+  // template name (prefixed with "sandbox:") for the infinite bench.
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const territory = territories.find(t => t.hasActiveBattle) || territories[0];
 
-  // In Sandbox mode, combine territory allocatedDefenders with remaining unallocated global pool/roster units
+  // ── Sandbox infinite bench logic ─────────────────────────────────────────────
+  // In sandbox mode non-hero units are always available (infinite copies).
+  // Hero units still come from the real pool (limited to 1).
+
+
+  // Combined list of defenders for the grid (always uses territory.allocatedDefenders)
   const poolToUse = globalUnitPool.length > 0 ? globalUnitPool : UNIT_ROSTER;
   const allocatedDefenders = isSandboxMode
     ? [
@@ -39,84 +48,148 @@ export const PreBattleSetup: React.FC<Props> = ({
   const unassignedUnits = allocatedDefenders.filter(u => u.gridPosition === undefined);
   const assignedUnits = allocatedDefenders.filter(u => u.gridPosition !== undefined);
 
-  // Group unassigned units into stacked cards by name
-  const unassignedStacksMap = unassignedUnits.reduce((acc, unit) => {
-    if (!acc[unit.name]) {
-      acc[unit.name] = {
-        name: unit.name,
-        type: unit.type,
-        hp: unit.hp,
-        damage: unit.damage,
-        units: []
-      };
-    }
-    acc[unit.name].units.push(unit);
-    return acc;
-  }, {} as Record<string, { name: string; type: string; hp: number; damage: number; units: UnitTemplate[] }>);
+  // ── Stack display ──────────────────────────────────────────────────────────
+  // For sandbox: show infinite non-hero stacks + real hero stack from pool.
+  // For campaign: normal limited stacks from unassigned pool.
 
-  const unassignedStacks = Object.values(unassignedStacksMap);
+  type StackEntry = {
+    name: string;
+    type: string;
+    hp: number;
+    damage: number;
+    units: UnitTemplate[];
+    infinite: boolean;   // true = sandbox unlimited
+    template?: UnitTemplate; // source template for spawning infinite copies
+  };
 
-  // Find which stack the currently selected unit belongs to
-  const selectedUnit = unassignedUnits.find(u => u.id === selectedUnitId);
+  let displayStacks: StackEntry[];
 
+  if (isSandboxMode) {
+    // Infinite non-hero types (always present, never depleted)
+    const infiniteStacks: StackEntry[] = SANDBOX_INFINITE_UNITS.map(tmpl => ({
+      name: tmpl.name,
+      type: tmpl.type,
+      hp: tmpl.hp,
+      damage: tmpl.damage,
+      units: [],          // empty — we create fresh copies on demand
+      infinite: true,
+      template: tmpl,
+    }));
+
+    // Real hero units from pool (limited)
+    const heroStacksMap: Record<string, StackEntry> = {};
+    unassignedUnits
+      .filter(u => u.type === 'hero')
+      .forEach(u => {
+        if (!heroStacksMap[u.name]) {
+          heroStacksMap[u.name] = { name: u.name, type: u.type, hp: u.hp, damage: u.damage, units: [], infinite: false };
+        }
+        heroStacksMap[u.name].units.push(u);
+      });
+
+    displayStacks = [...infiniteStacks, ...Object.values(heroStacksMap)];
+  } else {
+    // Standard campaign mode: group unassigned into stacks by name
+    const map: Record<string, StackEntry> = {};
+    unassignedUnits.forEach(unit => {
+      if (!map[unit.name]) {
+        map[unit.name] = { name: unit.name, type: unit.type, hp: unit.hp, damage: unit.damage, units: [], infinite: false };
+      }
+      map[unit.name].units.push(unit);
+    });
+    displayStacks = Object.values(map);
+  }
+
+  // ── Selected unit resolution ──────────────────────────────────────────────
+  // selectedUnitId can be:
+  //   - a real unit ID (from pool)
+  //   - "sandbox:<templateName>" for infinite bench selections
+  const isSandboxSelection = selectedUnitId?.startsWith('sandbox:');
+  const sandboxSelectedName = isSandboxSelection ? selectedUnitId!.slice('sandbox:'.length) : null;
+  const selectedUnit = isSandboxSelection
+    ? undefined
+    : unassignedUnits.find(u => u.id === selectedUnitId);
+  const isAnySelected = selectedUnitId !== null;
+
+  // ── Cell click ────────────────────────────────────────────────────────────
   const handleCellClick = (x: number, y: number) => {
     const occupant = assignedUnits.find(u => u.gridPosition?.x === x && u.gridPosition?.y === y);
 
     if (occupant) {
-      if (selectedUnitId && selectedUnitId !== occupant.id) {
-        // Case 2: Grid Cell occupied by a DIFFERENT Unit & a Unit is Selected
-        // Swap / Return Logic: Return existing unit to bench, place newly selected unit onto (x, y)
-        const currentSelected = selectedUnit;
-        updateUnitGridPosition(territory.id, occupant.id, undefined);
-        updateUnitGridPosition(territory.id, selectedUnitId, { x, y });
+      const isSameUnit = occupant.id === selectedUnitId || 
+        (isSandboxSelection && occupant.name === sandboxSelectedName) ||
+        (selectedUnit && occupant.name === selectedUnit.name);
 
-        if (currentSelected) {
-          const remainingInStack = unassignedUnits.filter(
-            u => u.name === currentSelected.name && u.id !== selectedUnitId
-          );
-          if (remainingInStack.length > 0) {
-            setSelectedUnitId(remainingInStack[0].id);
+      if (isSameUnit) {
+        // Recall occupant back to bench
+        updateUnitGridPosition(territory.id, occupant.id, undefined);
+        if (!isSandboxSelection) {
+          setSelectedUnitId(null);
+        }
+      } else if (selectedUnitId) {
+        if (isSandboxSelection && sandboxSelectedName) {
+          // Replace occupant with a brand-new copy of the infinite unit
+          updateUnitGridPosition(territory.id, occupant.id, undefined);
+          const tmpl = SANDBOX_INFINITE_UNITS.find(t => t.name === sandboxSelectedName);
+          if (tmpl) {
+            const newId = `sandbox_${tmpl.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            updateUnitGridPosition(territory.id, newId, { x, y }, tmpl);
+          }
+          // keep selection active so player can keep placing
+        } else {
+          // Swap real unit
+          updateUnitGridPosition(territory.id, occupant.id, undefined);
+          updateUnitGridPosition(territory.id, selectedUnitId!, { x, y });
+          // Advance to next in same stack
+          const currentSelected = selectedUnit;
+          if (currentSelected) {
+            const remaining = unassignedUnits.filter(u => u.name === currentSelected.name && u.id !== selectedUnitId);
+            setSelectedUnitId(remaining[0]?.id ?? null);
           } else {
             setSelectedUnitId(null);
           }
-        } else {
-          setSelectedUnitId(null);
         }
       } else {
-        // Case 3: Grid Cell occupied by the SAME Unit (Clicking a deployed unit or clicking occupied cell with same unit selected)
-        // Recall Logic: Return unit back to unassigned bench
+        // No unit selected: Recall occupant back to bench
         updateUnitGridPosition(territory.id, occupant.id, undefined);
         setSelectedUnitId(null);
       }
     } else if (selectedUnitId) {
-      // Case 1: Grid Cell is EMPTY & a Unit is Selected
-      const currentSelected = selectedUnit;
-      updateUnitGridPosition(territory.id, selectedUnitId, { x, y });
-
-      if (currentSelected) {
-        const remainingInStack = unassignedUnits.filter(
-          u => u.name === currentSelected.name && u.id !== selectedUnitId
-        );
-        if (remainingInStack.length > 0) {
-          setSelectedUnitId(remainingInStack[0].id);
+      if (isSandboxSelection && sandboxSelectedName) {
+        // Spawn a fresh copy of the infinite unit
+        const tmpl = SANDBOX_INFINITE_UNITS.find(t => t.name === sandboxSelectedName);
+        if (tmpl) {
+          const newId = `sandbox_${tmpl.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          updateUnitGridPosition(territory.id, newId, { x, y }, tmpl);
+        }
+        // Keep the sandbox selection active so the user can keep placing
+      } else {
+        // Place real unit
+        const currentSelected = selectedUnit;
+        updateUnitGridPosition(territory.id, selectedUnitId!, { x, y });
+        if (currentSelected) {
+          const remaining = unassignedUnits.filter(u => u.name === currentSelected.name && u.id !== selectedUnitId);
+          setSelectedUnitId(remaining[0]?.id ?? null);
         } else {
           setSelectedUnitId(null);
         }
-      } else {
-        setSelectedUnitId(null);
       }
     }
   };
 
-  const handleStackClick = (units: UnitTemplate[]) => {
-    if (units.length === 0) return;
-    const firstUnit = units[0];
-
-    // If a unit in this stack is already selected, deselect it; otherwise select first unit in stack
-    if (selectedUnit && selectedUnit.name === firstUnit.name) {
-      setSelectedUnitId(null);
+  const handleStackClick = (stack: StackEntry) => {
+    if (stack.infinite) {
+      // Toggle sandbox infinite selection
+      const key = `sandbox:${stack.name}`;
+      setSelectedUnitId(selectedUnitId === key ? null : key);
     } else {
-      setSelectedUnitId(firstUnit.id);
+      if (stack.units.length === 0) return;
+      const firstUnit = stack.units[0];
+      if (selectedUnit && selectedUnit.name === firstUnit.name) {
+        setSelectedUnitId(null);
+      } else {
+        setSelectedUnitId(firstUnit.id);
+      }
     }
   };
 
@@ -127,9 +200,14 @@ export const PreBattleSetup: React.FC<Props> = ({
     setSelectedUnitId(null);
   };
 
+  // Label for the active selection
+  const selectionLabel = isSandboxSelection
+    ? sandboxSelectedName
+    : selectedUnit?.name ?? null;
+
   return (
     <div className="w-full h-full bg-slate-950 text-slate-200 flex flex-col">
-      {/* Top Intel Header */}
+      {/* ── Top Intel Header ── */}
       <div className="flex-shrink-0 flex justify-between items-center bg-slate-900 border-b border-slate-700 p-4 shadow-lg z-10">
         <div>
           <div className="flex items-center gap-3">
@@ -166,177 +244,28 @@ export const PreBattleSetup: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-      {/* Main Tactical Grid View */}
-      <div className="flex flex-col items-center justify-center bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6">
-        <div className="text-[10px] md:text-xs uppercase tracking-widest text-slate-500 mb-3 font-bold flex justify-between w-full max-w-2xl px-2">
-          <span>← Player Defense Zone (8×6)</span>
-          <span className="text-amber-400">★ Gold Border = Choke Point (+20% Defense)</span>
-        </div>
-
-        {/* 8x6 Grid with Right-side Enemy Attack Direction Arrow */}
-        <div className="flex items-center gap-3 sm:gap-4 max-w-full overflow-x-auto p-1">
-          <div 
-            className="grid gap-2 bg-slate-950 p-3 md:p-4 rounded-xl border border-slate-800 shadow-2xl max-w-full"
-            style={{
-              gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
-            }}
-          >
-            {Array.from({ length: GRID_ROWS }).map((_, y) => 
-              Array.from({ length: GRID_COLS }).map((_, x) => {
-                const isChokePoint = y === 2 || y === 3;
-                const occupant = assignedUnits.find(u => u.gridPosition?.x === x && u.gridPosition?.y === y);
-                const isSelectedForPlace = selectedUnitId !== null;
-
-                return (
-                  <button
-                    key={`${x}-${y}`}
-                    onClick={() => handleCellClick(x, y)}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 aspect-square rounded-lg border-2 flex flex-col items-center justify-center relative transition-all shrink-0 group ${
-                      occupant 
-                        ? 'bg-slate-800 border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
-                        : isChokePoint
-                          ? 'border-amber-400/60 bg-amber-950/20 hover:bg-amber-900/30'
-                          : 'border-slate-800 bg-slate-900/80 hover:border-slate-600'
-                    } ${isSelectedForPlace && !occupant ? 'hover:border-cyan-400 hover:bg-cyan-950/30 animate-pulse' : ''}`}
-                  >
-                    {isChokePoint && !occupant && (
-                      <Sparkles className="w-3 h-3 text-amber-400/40 absolute top-1 right-1" />
-                    )}
-
-                    {occupant ? (
-                      <div className="flex flex-col items-center justify-between p-1 text-center w-full h-full relative z-0">
-                        {/* HP Bar (Above Unit) */}
-                        <div className="w-10 sm:w-11 md:w-12 h-1.5 bg-slate-950 border border-slate-700 rounded-full overflow-hidden shrink-0 mt-0.5">
-                          <div 
-                            className="h-full bg-emerald-500 rounded-full transition-all"
-                            style={{ width: `${Math.max(0, Math.min(100, (occupant.hp / (occupant.maxHp || occupant.hp)) * 100))}%` }}
-                          />
-                        </div>
-
-                        {/* Base Sprite: Plain Colored Circle */}
-                        <div className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full border-2 shrink-0 shadow-md flex items-center justify-center ${
-                          occupant.type === 'hero' 
-                            ? 'bg-amber-500 border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
-                            : occupant.type === 'elite'
-                            ? 'bg-purple-600 border-purple-300 shadow-[0_0_8px_rgba(147,51,234,0.5)]'
-                            : 'bg-blue-600 border-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.4)]'
-                        }`} />
-
-                        {/* Unit Name (Below Unit) */}
-                        <span className="text-[9px] sm:text-[10px] font-bold text-slate-200 truncate max-w-full leading-tight text-center mb-0.5">
-                          {occupant.name}
-                        </span>
-
-                        {/* Hover overlay to clear/recall */}
-                        <div className="absolute inset-0 bg-red-900/80 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity z-10">
-                          <X className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] md:text-[10px] text-slate-700 font-mono">
-                        {x},{y}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {/* Enemy Attack Direction Arrow (Points Left towards Grid) */}
-          <div 
-            data-testid="enemy-attack-indicator"
-            className="flex flex-col items-center justify-center bg-red-950/40 border border-red-800/80 p-3 sm:p-4 rounded-xl text-red-400 shrink-0 shadow-lg select-none"
-          >
-            <div className="flex items-center gap-1 animate-pulse">
-              <ArrowLeft className="w-6 h-6 md:w-8 md:h-8 text-red-500 stroke-[3]" />
-              <span className="text-xs md:text-sm font-black tracking-widest text-red-400 hidden sm:inline">
-                ATTACK
-              </span>
-            </div>
-            <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-red-300/80 mt-1 text-center leading-tight">
-              Enemy Wave<br />Direction
-            </span>
-          </div>
-        </div>
+      {/* ── Main Content: Left (Unit Bench) + Right (Deployment Grid) ── */}
+      <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
+        <UnitRosterList
+          isSandboxMode={isSandboxMode}
+          unassignedUnits={unassignedUnits}
+          assignedUnits={assignedUnits}
+          displayStacks={displayStacks}
+          selectionLabel={selectionLabel}
+          isSandboxSelection={isSandboxSelection || false}
+          sandboxSelectedName={sandboxSelectedName}
+          selectedUnit={selectedUnit}
+          handleStackClick={handleStackClick}
+          handleClearAll={handleClearAll}
+        />
+        <FormationGrid
+          assignedUnits={assignedUnits}
+          isAnySelected={isAnySelected}
+          handleCellClick={handleCellClick}
+        />
       </div>
 
-      {/* Unassigned Unit Bench (Stacked Cards with Wrap Layout) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shrink-0">
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400">
-              Unassigned Bench ({unassignedUnits.length} Total Units)
-            </h3>
-            {selectedUnit && (
-              <span className="text-xs text-cyan-400 font-bold bg-cyan-950 border border-cyan-800 px-2 py-0.5 rounded flex items-center gap-1">
-                Deploying: {selectedUnit.name} (Click Grid)
-              </span>
-            )}
-          </div>
-          {assignedUnits.length > 0 && (
-            <button 
-              onClick={handleClearAll}
-              className="text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-wider"
-            >
-              Clear Grid ({assignedUnits.length})
-            </button>
-          )}
-        </div>
-
-        {/* Wrapping Grid Layout instead of Horizontal Scroll */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {unassignedStacks.length === 0 ? (
-            <div className="col-span-full text-slate-500 text-sm italic py-2 text-center">
-              {allocatedDefenders.length === 0 
-                ? "No defenders allocated to this territory yet! Go back to Empire Management to assign troops."
-                : "All allocated defenders have been deployed onto the grid!"
-              }
-            </div>
-          ) : (
-            unassignedStacks.map(stack => {
-              const isSelectedStack = selectedUnit && selectedUnit.name === stack.name;
-              return (
-                <button
-                  key={stack.name}
-                  onClick={() => handleStackClick(stack.units)}
-                  className={`flex flex-col items-start p-3 rounded-lg border-2 transition-all text-left relative ${
-                    isSelectedStack 
-                      ? 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-[1.02]' 
-                      : 'border-slate-700 bg-slate-950 hover:border-slate-500 hover:bg-slate-900/80'
-                  }`}
-                >
-                  {/* Stack Quantity Badge */}
-                  <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-black font-black text-xs rounded-full shadow-md flex items-center gap-0.5">
-                    ×{stack.units.length}
-                  </div>
-
-                  <div className="flex justify-between items-center w-full pr-8">
-                    <span className="font-bold text-white text-sm truncate">{stack.name}</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 uppercase mt-0.5">{stack.type}</span>
-                  
-                  <div className="text-[11px] text-slate-400 mt-2 font-mono flex justify-between w-full">
-                    <span>HP: {stack.hp}</span>
-                    <span>DMG: {stack.damage}</span>
-                  </div>
-
-                  {isSelectedStack && (
-                    <div className="mt-2 text-[10px] text-cyan-300 font-bold flex items-center gap-1">
-                      <UserCheck className="w-3 h-3" /> Ready to Place 1-by-1
-                    </div>
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-      </div>
-
-      {/* Action Bar */}
+      {/* ── Action Bar ── */}
       <div className="flex-shrink-0 flex justify-between items-center p-4 border-t border-slate-700 bg-slate-900 z-10">
         {onBackToMap && (
           <button 

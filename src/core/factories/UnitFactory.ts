@@ -1,6 +1,19 @@
 import type { Unit, UnitTemplate, BattlefieldZoneConfig } from '../../types/combat';
 import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
 
+// ─── Shared Deployment Grid Constants ────────────────────────────────────────
+// These constants define the grid in both the Pre-Battle UI and the battle
+// canvas. Using the same pixel cell size ensures a 1:1 spatial mapping so
+// adjacent cells in the deployment grid are the same distance apart in combat.
+export const DEPLOY_GRID_COLS = 5;
+export const DEPLOY_GRID_ROWS = 8;
+export const DEPLOY_CELL_PX = 60;    // px per grid cell (both axes, square cells)
+export const DEPLOY_MARGIN_X = 30;   // px from left edge of spawn zone
+
+/** Returns the top margin (px) that centres the deployment grid vertically on the canvas. */
+export const getDeployMarginY = (canvasHeight: number): number =>
+  Math.max(20, (canvasHeight - DEPLOY_GRID_ROWS * DEPLOY_CELL_PX) / 2);
+
 export class UnitFactory {
   static createDefender(x: number, y: number, template?: Partial<Unit>): Unit {
     const unitType = (template as Partial<UnitTemplate>)?.type || 'common';
@@ -67,22 +80,26 @@ export class UnitFactory {
   ): Unit {
     // Player Spawn Zone (default: 0% to 30% of canvas width)
     const spawnZoneWidth = canvasWidth * zoneConfig.playerSpawnRatio;
-    let x = spawnZoneWidth * 0.5;
-    let y = canvasHeight * 0.5;
+
+    let x: number;
+    let y: number;
 
     if (template.gridPosition) {
-      const gridCols = 8;
-      const gridRows = 6;
-      const marginX = 40;
-      const marginY = 80;
-      const availableW = Math.max(100, spawnZoneWidth - marginX * 2);
-      const availableH = Math.max(100, canvasHeight - marginY * 2);
-      
-      const cellW = availableW / gridCols;
-      const cellH = availableH / gridRows;
+      // ── 1:1 fixed-cell-size placement ──────────────────────────────────────
+      // Each grid cell is exactly DEPLOY_CELL_PX × DEPLOY_CELL_PX pixels.
+      // getDeployMarginY centres the grid vertically so the battle placement
+      // matches whatever is drawn in the canvas grid overlay.
+      const marginY = getDeployMarginY(canvasHeight);
+      x = DEPLOY_MARGIN_X + (template.gridPosition.x + 0.5) * DEPLOY_CELL_PX;
+      y = marginY + (template.gridPosition.y + 0.5) * DEPLOY_CELL_PX;
 
-      x = marginX + (template.gridPosition.x + 0.5) * cellW;
-      y = marginY + (template.gridPosition.y + 0.5) * cellH;
+      // Safety clamp: keep within spawn zone / canvas bounds
+      x = Math.min(x, spawnZoneWidth - 20);
+      y = Math.max(20, Math.min(y, canvasHeight - 20));
+    } else {
+      // Fallback: centre of spawn zone
+      x = spawnZoneWidth * 0.5;
+      y = canvasHeight * 0.5;
     }
 
     const nameLower = (template.name || '').toLowerCase();

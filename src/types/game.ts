@@ -5,6 +5,12 @@ export type Theme = 'dark-fantasy' | 'cyberpunk' | 'slate';
 
 export interface Settings {
   masterVolume: number;
+  sfxVolume: number;
+  characterVolume: number;
+  bgmVolume: number;
   isMuted: boolean;
+  isSfxMuted: boolean;
+  isCharacterMuted: boolean;
+  isBgmMuted: boolean;
   theme: Theme;
 }

@@ -5,6 +5,8 @@ import { UnitEntity, type SimulationContext } from '../entities/UnitEntity';
 import { UnitFactory } from '../factories/UnitFactory';
 import { UNIT_ROSTER } from '../../data/units';
 import { type WaveStrategy, SkirmishWave } from './WaveStrategy';
+import { DEPLOY_GRID_COLS } from '../factories/UnitFactory';
+import { getDistance, getDirection } from '../math/utils';
 
 export class GameEngine {
   private static instance: GameEngine;
@@ -104,8 +106,10 @@ export class GameEngine {
         { id: '3', name: 'Aric the Shieldbreaker', type: 'hero' as const, hp: 500, maxHp: 500, damage: 40, range: 50, attackSpeed: 1, cost: 300, abilities: [] }
       ];
 
+      // Auto-assign grid positions using the shared DEPLOY_GRID_COLS constant
+      // so the fallback layout is consistent with the pre-battle grid.
       rosterToUse.forEach((tmpl, i) => {
-        const gridPos = { x: i % 4, y: Math.floor(i / 4) * 2 + 1 };
+        const gridPos = { x: i % DEPLOY_GRID_COLS, y: Math.floor(i / DEPLOY_GRID_COLS) };
         const defenderUnit = UnitFactory.fromTemplate({ ...tmpl, gridPosition: gridPos }, this.canvasWidth, this.canvasHeight, this.zoneConfig);
         this.entities.push(new UnitEntity(defenderUnit));
       });
@@ -153,6 +157,7 @@ export class GameEngine {
 
   private handleDealDamage = (attacker: Unit, target: Unit, damage: number) => {
     if (isNaN(damage) || damage < 0) damage = 0;
+    if (isNaN(target.hp)) target.hp = 0;
     target.hp = Math.max(0, target.hp - damage);
 
     this.damageTexts.push({
@@ -210,12 +215,10 @@ export class GameEngine {
           const r2 = isHero2 ? 14 : 10;
 
           const minDist = r1 + r2 + 4;
-          let dx = u1.data.x - u2.data.x;
-          let dy = u1.data.y - u2.data.y;
-          let dist = Math.sqrt(dx * dx + dy * dy);
+          let { dx, dy, dist } = getDirection(u2.data.x, u2.data.y, u1.data.x, u1.data.y);
 
           if (dist < minDist) {
-            if (dist < 0.001) {
+            if (dist === 0) {
               const angle = Math.random() * Math.PI * 2;
               dx = Math.cos(angle);
               dy = Math.sin(angle);
@@ -223,16 +226,13 @@ export class GameEngine {
             }
 
             const overlap = minDist - dist;
-            const nx = dx / dist;
-            const ny = dy / dist;
-
             const pushAmount = overlap * 0.5;
 
-            u1.data.x += nx * pushAmount;
-            u1.data.y += ny * pushAmount;
+            u1.data.x += dx * pushAmount;
+            u1.data.y += dy * pushAmount;
 
-            u2.data.x -= nx * pushAmount;
-            u2.data.y -= ny * pushAmount;
+            u2.data.x -= dx * pushAmount;
+            u2.data.y -= dy * pushAmount;
           }
         }
       }

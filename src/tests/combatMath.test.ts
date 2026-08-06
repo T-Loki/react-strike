@@ -1,27 +1,29 @@
 import { describe, it, expect } from 'vitest';
+import { getDistance, getDirection, isInRange, getHealthPercentage } from '../core/math/utils';
 import type { Territory } from '../types/combat';
 
-// Mock functions for math that would typically live in src/engine/math.ts
-const calculateDistance = (x1: number, y1: number, x2: number, y2: number) => {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-};
-
-const isInRange = (distance: number, range: number) => {
-  return distance <= range;
-};
-
+// Mock function for scorched payout as requested to keep in tests or logic
 const calculateScorchedPayout = (_territory: Territory) => {
   return 1000;
 };
 
-const getHealthPercentage = (current: number, max: number) => {
-  if (max === 0) return 0; // Divide by zero protection
-  return (current / max) * 100;
-};
-
-describe('Combat Math', () => {
+describe('Combat Math Utils', () => {
   it('calculates 2D distance correctly', () => {
-    expect(calculateDistance(0, 0, 3, 4)).toBe(5);
+    expect(getDistance(0, 0, 3, 4)).toBe(5);
+  });
+
+  it('calculates direction correctly', () => {
+    const dir = getDirection(0, 0, 3, 4);
+    expect(dir.dist).toBe(5);
+    expect(dir.dx).toBe(3 / 5);
+    expect(dir.dy).toBe(4 / 5);
+  });
+
+  it('handles direction with 0 distance (same point)', () => {
+    const dir = getDirection(5, 5, 5, 5);
+    expect(dir.dist).toBe(0);
+    expect(dir.dx).toBe(0);
+    expect(dir.dy).toBe(0);
   });
 
   it('verifies attack range correctly', () => {
@@ -34,9 +36,10 @@ describe('Combat Math', () => {
     expect(calculateScorchedPayout(t)).toBe(1000);
   });
 
-  it('protects against divide-by-zero in health scaling', () => {
+  it('protects against divide-by-zero or negative max health in health scaling', () => {
     expect(getHealthPercentage(100, 100)).toBe(100);
     expect(getHealthPercentage(50, 100)).toBe(50);
     expect(getHealthPercentage(0, 0)).toBe(0);
+    expect(getHealthPercentage(10, -50)).toBe(0);
   });
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCampaign } from '../../context/CampaignContext';
 import { Skull, Coins, Users, ShieldAlert, Plus, Minus, X } from 'lucide-react';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 interface Props {
   onEndPhase?: () => void;
@@ -23,7 +24,8 @@ export const EmpireManagement: React.FC<Props> = ({ onEndPhase }) => {
   const selectedTerritory = territories.find(t => t.id === selectedTerritoryId);
 
   return (
-    <div className="w-full h-full bg-slate-950 text-slate-200 flex flex-col">
+    <ErrorBoundary>
+      <div className="w-full h-full bg-slate-950 text-slate-200 flex flex-col">
       {/* Top Resource Bar */}
       <div className="flex-shrink-0 flex justify-between items-center bg-slate-900 border-b border-slate-700 p-4 shadow-lg z-10">
         <div className="flex gap-6">
@@ -192,5 +194,6 @@ export const EmpireManagement: React.FC<Props> = ({ onEndPhase }) => {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 };
