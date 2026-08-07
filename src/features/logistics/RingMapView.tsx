@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { Territory } from '../../types/combat';
 import { Flame, Shield, Skull, Zap, Move, ZoomIn, ZoomOut } from 'lucide-react';
+import { getTerritoryPosition } from '../../core/math/empireCalculations';
 
 interface Props {
   territories: Territory[];
@@ -25,40 +26,6 @@ export const RingMapView: React.FC<Props> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
-
-  const getTerritoryPosition = (territory: Territory, all: Territory[]) => {
-    const sameRing = all.filter(t => t.ringLevel === territory.ringLevel);
-    const index = sameRing.findIndex(t => t.id === territory.id);
-    const count = sameRing.length;
-
-    const ringRadii: Record<number, number> = {
-      0: 0,
-      1: 110,
-      2: 195,
-      3: 275,
-    };
-
-    const radius = ringRadii[territory.ringLevel] ?? (territory.ringLevel * 90);
-
-    if (territory.ringLevel === 0) {
-      return { x: 400, y: 300 };
-    }
-
-    const baseAngles: Record<number, number> = {
-      1: -90,
-      2: 30,
-      3: 150,
-    };
-    const baseAngle = baseAngles[territory.ringLevel] ?? 0;
-    const angleStep = 360 / Math.max(1, count);
-    const angleDeg = baseAngle + index * angleStep;
-    const angleRad = (angleDeg * Math.PI) / 180;
-
-    return {
-      x: 400 + radius * Math.cos(angleRad),
-      y: 300 + radius * Math.sin(angleRad),
-    };
-  };
 
   const center = { x: 400, y: 300 };
   const positions = territories.map(t => ({

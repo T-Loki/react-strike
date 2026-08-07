@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { StoryScene } from '../features/visual_novel/StoryScene';
 import type { StoryScript } from '../types/vn';
 

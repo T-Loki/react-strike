@@ -3,6 +3,7 @@ import type { Unit } from '../../types/combat';
 import { useGameEngine } from '../../hooks/useGameEngine';
 import { useGameEvent } from '../../hooks/useGameEvent';
 import { getDistance } from '../../core/math/utils';
+import { getSelectedUnitAtCoordinates } from '../../core/math/canvasSelection';
 import {
   DEPLOY_GRID_COLS,
   DEPLOY_GRID_ROWS,
@@ -29,18 +30,7 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
     const clickY = e.clientY - rect.top;
 
     const entities = engine.getEntities();
-    let clicked: { unit: Unit; stateName: string } | null = null;
-    let minDist = 25;
-
-    entities.forEach(ent => {
-      if (ent.data.hp > 0) {
-        const dist = getDistance(ent.data.x, ent.data.y, clickX, clickY);
-        if (dist < minDist) {
-          minDist = dist;
-          clicked = { unit: ent.data, stateName: ent.getStateName() };
-        }
-      }
-    });
+    const clicked = getSelectedUnitAtCoordinates(clickX, clickY, entities);
 
     setSelectedUnit(clicked);
   };

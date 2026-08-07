@@ -102,28 +102,41 @@ export class GameEngine {
 
   public loadFormation(templates: UnitTemplate[]): void {
     this.clearBoard();
-    const placed = templates.filter(t => t.gridPosition !== undefined);
-    
-    if (placed.length > 0) {
-      placed.forEach(t => {
-        const defenderUnit = UnitFactory.fromTemplate(t, this.canvasWidth, this.canvasHeight, this.zoneConfig);
-        this.entities.push(new UnitEntity(defenderUnit));
-      });
-    } else {
-      const rosterToUse = UNIT_ROSTER.length > 0 ? UNIT_ROSTER : [
+    const sourceTemplates = templates.length > 0 ? templates : (
+      UNIT_ROSTER.length > 0 ? UNIT_ROSTER : [
         { id: '1', name: 'Vanguard Spearman', type: 'common' as const, hp: 120, maxHp: 120, damage: 15, range: 60, attackSpeed: 1, cost: 50, abilities: [] },
         { id: '2', name: 'Iron Crossbow', type: 'common' as const, hp: 80, maxHp: 80, damage: 25, range: 200, attackSpeed: 0.8, cost: 75, abilities: [] },
         { id: '3', name: 'Aric the Shieldbreaker', type: 'hero' as const, hp: 500, maxHp: 500, damage: 40, range: 50, attackSpeed: 1, cost: 300, abilities: [] }
-      ];
+      ]
+    );
 
-      // Auto-assign grid positions using the shared DEPLOY_GRID_COLS constant
-      // so the fallback layout is consistent with the pre-battle grid.
-      rosterToUse.forEach((tmpl, i) => {
-        const gridPos = { x: i % DEPLOY_GRID_COLS, y: Math.floor(i / DEPLOY_GRID_COLS) };
-        const defenderUnit = UnitFactory.fromTemplate({ ...tmpl, gridPosition: gridPos }, this.canvasWidth, this.canvasHeight, this.zoneConfig);
-        this.entities.push(new UnitEntity(defenderUnit));
-      });
-    }
+    const usedCoords = new Set<string>();
+    sourceTemplates.forEach(t => {
+      if (t.gridPosition) {
+        usedCoords.add(`${t.gridPosition.x},${t.gridPosition.y}`);
+      }
+    });
+
+    let autoX = 0;
+    let autoY = 0;
+    const findNextAvailablePos = () => {
+      while (usedCoords.has(`${autoX},${autoY}`)) {
+        autoX++;
+        if (autoX >= DEPLOY_GRID_COLS) {
+          autoX = 0;
+          autoY++;
+        }
+      }
+      const pos = { x: autoX, y: autoY };
+      usedCoords.add(`${autoX},${autoY}`);
+      return pos;
+    };
+
+    sourceTemplates.forEach(tmpl => {
+      const gridPos = tmpl.gridPosition || findNextAvailablePos();
+      const defenderUnit = UnitFactory.fromTemplate({ ...tmpl, gridPosition: gridPos }, this.canvasWidth, this.canvasHeight, this.zoneConfig);
+      this.entities.push(new UnitEntity(defenderUnit));
+    });
   }
 
   public spawnHordeWave(strategy?: WaveStrategy, count?: number): void {

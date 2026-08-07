@@ -2,6 +2,15 @@ import React from 'react';
 import type { Territory, UnitTemplate } from '../../types/combat';
 import type { EmporiumItem } from '../../types/game';
 import { Crown, Coins, Users, Shield, Building2, Flame, Sparkles, Store, Skull } from 'lucide-react';
+import { 
+  getActiveTerritories, 
+  getScorchedTerritories, 
+  getFrontlineTerritories,
+  calculateTotalGoldYield,
+  calculateTotalFaithYield,
+  calculateTotalAssignedUnits,
+  calculateTotalBuildings
+} from '../../core/math/empireCalculations';
 
 interface Props {
   territories: Territory[];
@@ -22,22 +31,17 @@ export const EmpireOverviewPanel: React.FC<Props> = ({
   emporiumItems,
   purchasedItemIds,
 }) => {
-  const activeTerritories = territories.filter(t => !t.isScorched);
-  const scorchedTerritories = territories.filter(t => t.isScorched);
-  const frontlineTerritories = territories.filter(t => t.hasActiveBattle && !t.isScorched);
+  const activeTerritories = getActiveTerritories(territories);
+  const scorchedTerritories = getScorchedTerritories(territories);
+  const frontlineTerritories = getFrontlineTerritories(territories);
 
-  // Total Gold and Faith yield from all unscorched territories
-  const totalGoldYield = activeTerritories.reduce((acc, t) => acc + t.resourceYield, 0);
-  const totalFaithYield = activeTerritories.reduce((acc, t) => acc + (t.faithYield ?? 10), 0);
+  const totalGoldYield = calculateTotalGoldYield(territories);
+  const totalFaithYield = calculateTotalFaithYield(territories);
 
-  // Total assigned units across all territories
-  const totalAssignedUnits = territories.reduce((acc, t) => acc + t.allocatedDefenders.length, 0);
+  const totalAssignedUnits = calculateTotalAssignedUnits(territories);
   const totalArmySize = globalUnitPool.length + totalAssignedUnits;
 
-  // Total buildings constructed across empire
-  const totalBuildings = territories.reduce((acc, t) => {
-    return acc + (t.buildings?.length ?? 0);
-  }, 0);
+  const totalBuildings = calculateTotalBuildings(territories);
 
   const purchasedPerks = emporiumItems.filter(i => purchasedItemIds.includes(i.id));
 

@@ -14,7 +14,7 @@ export const SandboxCanvas: React.FC<SandboxCanvasProps> = ({
   onNavigate, 
   onBackToPlanning 
 }) => {
-  const { globalUnitPool } = useCampaign();
+  const { sandboxDefenders } = useCampaign();
 
   return (
     <ErrorBoundary>
@@ -23,7 +23,7 @@ export const SandboxCanvas: React.FC<SandboxCanvasProps> = ({
           onBackToMap={onBackToPlanning}
           onNavigate={onNavigate}
           isSandboxMode={true}
-          sandboxPool={globalUnitPool}
+          sandboxPool={sandboxDefenders}
         />
       </div>
     </ErrorBoundary>

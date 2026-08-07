@@ -2,6 +2,8 @@ import React from 'react';
 import type { Territory, UnitTemplate } from '../../types/combat';
 import { UNIT_ROSTER } from '../../data/units';
 import { Users, Coins, Shield, ArrowLeftRight } from 'lucide-react';
+import { groupUnitsIntoStackMap, groupAssignedDefendersIntoStacks } from '../../core/math/empireCalculations';
+import type { UnitStack } from '../../core/math/empireCalculations';
 
 interface Props {
   territories: Territory[];
@@ -14,15 +16,6 @@ interface Props {
   onBuyUnit: (unitTemplateId: string) => void;
   onTransferUnits: (fromId: string, toId: string, unitIds: string[]) => void;
 }
-
-type UnitStack = {
-  name: string;
-  type: string;
-  hp: number;
-  damage: number;
-  range: number;
-  units: UnitTemplate[];
-};
 
 // Non-hero unit templates available for purchase in the recruitment store
 const PURCHASABLE_UNITS = UNIT_ROSTER.filter(u => u.type !== 'hero');
@@ -43,23 +36,11 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
   const selectedTerritory = territories.find(t => t.id === currentTerritoryId);
 
   // Group Global Pool Units into Stack Map
-  const poolStackMap: Record<string, UnitTemplate[]> = {};
-  globalUnitPool.forEach(u => {
-    if (!poolStackMap[u.name]) poolStackMap[u.name] = [];
-    poolStackMap[u.name].push(u);
-  });
+  const poolStackMap = groupUnitsIntoStackMap(globalUnitPool);
 
   // Group Assigned Garrison Units into Stack Cards
   const assignedDefenders = selectedTerritory ? selectedTerritory.allocatedDefenders : [];
-  const assignedStacks: UnitStack[] = Object.values(
-    assignedDefenders.reduce<Record<string, UnitStack>>((acc, u) => {
-      if (!acc[u.name]) {
-        acc[u.name] = { name: u.name, type: u.type, hp: u.hp, damage: u.damage, range: u.range, units: [] };
-      }
-      acc[u.name].units.push(u);
-      return acc;
-    }, {})
-  );
+  const assignedStacks = groupAssignedDefendersIntoStacks(assignedDefenders);
 
   const handleTransferAllToGarrison = () => {
     if (!selectedTerritory || globalUnitPool.length === 0) return;

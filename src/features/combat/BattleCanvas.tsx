@@ -48,23 +48,18 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
   const initBattlefield = useCallback(() => {
     engine.clearBoard();
 
-    const placedDefenders = activeTerritory?.allocatedDefenders.filter(
-      t => t.gridPosition !== undefined
-    ) ?? [];
-
-    if (placedDefenders.length > 0) {
-      engine.loadFormation(placedDefenders);
-    } else if (isSandboxMode && sandboxPool.length > 0) {
-      const withPositions = sandboxPool.map((t, i) => ({
-        ...t,
-        gridPosition: t.gridPosition ?? {
-          x: i % 5,
-          y: Math.floor(i / 5),
-        },
-      }));
-      engine.loadFormation(withPositions);
+    if (isSandboxMode) {
+      const deployedSandbox = sandboxPool.filter(u => u.gridPosition !== undefined);
+      const unitsToLoad = deployedSandbox.length > 0 ? deployedSandbox : sandboxPool;
+      if (unitsToLoad.length > 0) {
+        engine.loadFormation(unitsToLoad);
+      } else {
+        engine.loadFormation(UNIT_ROSTER);
+      }
     } else if (activeTerritory && activeTerritory.allocatedDefenders.length > 0) {
-      engine.loadFormation(activeTerritory.allocatedDefenders);
+      const assigned = activeTerritory.allocatedDefenders.filter(u => u.gridPosition !== undefined);
+      const unitsToLoad = assigned.length > 0 ? assigned : activeTerritory.allocatedDefenders;
+      engine.loadFormation(unitsToLoad);
     } else {
       engine.loadFormation(UNIT_ROSTER);
     }

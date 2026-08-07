@@ -10,7 +10,6 @@ export const useGameEngine = () => {
 
     return () => {
       engine.stop();
-      engine.clearBoard();
     };
   }, []);
 

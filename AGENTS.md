@@ -56,8 +56,11 @@
 
 ## Automated Testing & Regression Safety Rules
 1. **Mandatory Test Verification**: Every new feature or balance tweak MUST pass the Vitest suite (`npm run test`).
-2. **Context & Math Test Protection**: Any changes to `CampaignContext.tsx`, `updateFrontlines()`, or combat formulas require updating or adding corresponding unit tests in `src/tests/`.
-3. **Zero-Regression Bar**: Never mark a task as complete if `npm run test` reports failing assertions.
+2. **Zero-Regression Bar**: Never mark a task as complete if `npm run test` reports failing assertions. If ANY existing test fails, that is a regression — fix the code, not the test, unless the test was asserting incorrect old behavior (explain why if so). Never delete or weaken a test just to make it pass.
+3. **No Exceptions for Pure Logic**: Identify every pure function, state transition, and reducer touched — these MUST have unit tests, no exceptions.
+4. **Coverage Edge Cases**: For new features, write tests for: the normal case, boundary/edge cases, and at least one invalid/unexpected input case.
+5. **UI & Canvas Tangles**: If something is hard to unit test (rendering, animation, timing), say so explicitly instead of skipping it silently — list what's covered vs what still needs manual testing.
+6. **Coverage Diligence**: After any refactor, don't just check "the app still runs" — run the test suite and confirm the total test count and coverage % didn't drop. If it did, explain why before proceeding.
 
 ## Strict Typing Rules
 1. **The 'any' Purge**: The use of explicit or implicit `any` types is strictly forbidden across the codebase.
