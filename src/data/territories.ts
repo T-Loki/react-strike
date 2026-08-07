@@ -5,13 +5,16 @@ import {
   INITIAL_BUILDINGS_FORTRESS,
   INITIAL_BUILDINGS_CITADEL
 } from './buildings';
-import { GARRISON_SOLDIER } from './units';
+import { FACTIONS } from './units';
 
-const createGarrisonTrio = (territoryPrefix: string): UnitTemplate[] => [
-  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_1` },
-  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_2` },
-  { ...GARRISON_SOLDIER, id: `garrison_${territoryPrefix}_3` },
-];
+const createGarrisonTrio = (territoryPrefix: string): UnitTemplate[] => {
+  const garrisonSoldier = FACTIONS.pantheon.garrison[0];
+  return [
+    { ...garrisonSoldier, id: `garrison_${territoryPrefix}_1` },
+    { ...garrisonSoldier, id: `garrison_${territoryPrefix}_2` },
+    { ...garrisonSoldier, id: `garrison_${territoryPrefix}_3` },
+  ];
+};
 
 export const INITIAL_TERRITORIES: Territory[] = [
   {

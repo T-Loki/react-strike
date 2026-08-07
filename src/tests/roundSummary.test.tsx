@@ -18,7 +18,7 @@ describe('City Surrender & Round Summary System', () => {
         togglePause={() => {}}
         enemyMenuOpen={false}
         setEnemyMenuOpen={() => {}}
-        ENEMY_CATALOGUE={[]}
+        enemyCatalog={[]}
         spawnEnemies={() => {}}
         initBattlefield={() => {}}
         isSandboxMode={false}

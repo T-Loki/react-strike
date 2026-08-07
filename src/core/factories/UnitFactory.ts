@@ -28,6 +28,8 @@ export class UnitFactory {
       defaultColor = '#38bdf8';
     }
 
+    const defaultWeight = template?.weight ?? (unitType === 'hero' ? 3.0 : unitType === 'elite' ? 1.8 : 1.0);
+
     return {
       id: template?.id || `defender-${Math.random().toString(36).substring(2, 9)}`,
       name: template?.name || 'Vanguard Spearman',
@@ -48,10 +50,20 @@ export class UnitFactory {
       homeX: x,
       homeY: y,
       unitType,
+      faction: template?.faction || 'pantheon',
+      weight: defaultWeight,
     };
   }
 
   static createHorde(x: number, y: number, template?: Partial<Unit>): Unit {
+    const nameLower = (template?.name || '').toLowerCase();
+    const defaultWeight = template?.weight ?? (
+      nameLower.includes('behemoth') ? 3.5 :
+      nameLower.includes('berserker') ? 1.4 :
+      nameLower.includes('warrior') ? 1.5 :
+      nameLower.includes('goblin') ? 0.6 : 1.0
+    );
+
     return {
       id: template?.id || `horde-${Math.random().toString(36).substring(2, 9)}`,
       name: template?.name || 'Orc Grunt',
@@ -70,6 +82,8 @@ export class UnitFactory {
       color: template?.color || '#ef4444',
       homeX: x,
       homeY: y,
+      faction: template?.faction || 'horde',
+      weight: defaultWeight,
     };
   }
 
@@ -79,38 +93,33 @@ export class UnitFactory {
     canvasHeight: number,
     zoneConfig: BattlefieldZoneConfig = DEFAULT_BATTLEFIELD_ZONES
   ): Unit {
-    // Player Spawn Zone (default: 0% to 30% of canvas width)
     const spawnZoneWidth = canvasWidth * zoneConfig.playerSpawnRatio;
 
     let x: number;
     let y: number;
 
     if (template.gridPosition) {
-      // ── 1:1 fixed-cell-size placement ──────────────────────────────────────
-      // Each grid cell is exactly DEPLOY_CELL_PX × DEPLOY_CELL_PX pixels.
-      // getDeployMarginY centres the grid vertically so the battle placement
-      // matches whatever is drawn in the canvas grid overlay.
       const marginY = getDeployMarginY(canvasHeight);
       x = DEPLOY_MARGIN_X + (template.gridPosition.x + 0.5) * DEPLOY_CELL_PX;
       y = marginY + (template.gridPosition.y + 0.5) * DEPLOY_CELL_PX;
 
-      // Safety clamp: keep within spawn zone / canvas bounds
       x = Math.min(x, spawnZoneWidth - 20);
       y = Math.max(20, Math.min(y, canvasHeight - 20));
     } else {
-      // Fallback: centre of spawn zone
       x = spawnZoneWidth * 0.5;
       y = canvasHeight * 0.5;
     }
 
     const nameLower = (template.name || '').toLowerCase();
-    let defaultColor = '#22c55e';
-    if (template.type === 'hero') {
-      defaultColor = '#f59e0b';
-    } else if (template.type === 'elite') {
-      defaultColor = '#a855f7';
-    } else if (nameLower.includes('crossbow') || nameLower.includes('archer')) {
-      defaultColor = '#38bdf8';
+    let defaultColor = template.color || '#22c55e';
+    if (!template.color) {
+      if (template.type === 'hero') {
+        defaultColor = '#f59e0b';
+      } else if (template.type === 'elite') {
+        defaultColor = '#a855f7';
+      } else if (nameLower.includes('crossbow') || nameLower.includes('archer')) {
+        defaultColor = '#38bdf8';
+      }
     }
 
     return UnitFactory.createDefender(x, y, {
@@ -119,11 +128,15 @@ export class UnitFactory {
       hp: template.hp,
       maxHp: template.maxHp || template.hp,
       damage: template.damage,
+      armor: template.armor,
       range: template.range,
       attackRange: template.range,
+      speed: template.speed,
       color: defaultColor,
       gridPosition: template.gridPosition,
       unitType: template.type,
+      faction: template.faction || 'pantheon',
+      weight: template.weight,
     });
   }
 }

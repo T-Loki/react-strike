@@ -3,7 +3,7 @@ import { useCampaign } from '../../context/CampaignContext';
 import type { GameState } from '../../types/game';
 import type { UnitTemplate } from '../../types/combat';
 import { Shield, Play, ArrowLeft, FlaskConical, Home } from 'lucide-react';
-import { UNIT_ROSTER, GARRISON_SOLDIER } from '../../data/units';
+import { FACTIONS } from '../../data/units';
 import { FormationGrid } from './FormationGrid';
 import { UnitRosterList, type StackEntry } from './UnitRosterList';
 import { DEPLOY_GRID_COLS, DEPLOY_GRID_ROWS } from '../../core/factories/UnitFactory';
@@ -16,7 +16,7 @@ interface Props {
 }
 
 // Non-hero unit templates used for the sandbox infinite bench
-const SANDBOX_INFINITE_UNITS: UnitTemplate[] = UNIT_ROSTER.filter(
+const SANDBOX_INFINITE_UNITS: UnitTemplate[] = FACTIONS.pantheon.roster.filter(
   u => u.type !== 'hero' && u.name !== 'City Militia' && u.name !== 'Garrison Soldier'
 );
 
@@ -33,7 +33,7 @@ export const PreBattleSetup: React.FC<Props> = ({
   const activeLocationId = isSandboxMode ? 'sandbox' : territory.id;
 
   // Combined list of defenders for the grid
-  const poolToUse = globalUnitPool.length > 0 ? globalUnitPool : UNIT_ROSTER;
+  const poolToUse = globalUnitPool.length > 0 ? globalUnitPool : FACTIONS.pantheon.roster;
   const allocatedDefenders = isSandboxMode
     ? [
         ...sandboxDefenders,
@@ -175,9 +175,9 @@ export const PreBattleSetup: React.FC<Props> = ({
         ? allocatedDefenders.slice(0, 3)
         : [
             ...allocatedDefenders,
-            { ...GARRISON_SOLDIER, id: `emerg_garrison_1_${Date.now()}` },
-            { ...GARRISON_SOLDIER, id: `emerg_garrison_2_${Date.now()}` },
-            { ...GARRISON_SOLDIER, id: `emerg_garrison_3_${Date.now()}` },
+            { ...FACTIONS.pantheon.garrison[0], id: `emerg_garrison_1_${Date.now()}` },
+            { ...FACTIONS.pantheon.garrison[0], id: `emerg_garrison_2_${Date.now()}` },
+            { ...FACTIONS.pantheon.garrison[0], id: `emerg_garrison_3_${Date.now()}` },
           ].slice(0, 3);
 
       const availableGridCoords: { x: number; y: number }[] = [];

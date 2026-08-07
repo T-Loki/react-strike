@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Territory, UnitTemplate } from '../types/combat';
 import type { EmporiumItem } from '../types/game';
 import { INITIAL_TERRITORIES } from '../data/territories';
-import { UNIT_ROSTER } from '../data/units';
+import { FACTIONS } from '../data/units';
 import { INITIAL_EMPORIUM_ITEMS } from '../data/emporium';
 
 export interface RoundBattleRecord {
@@ -55,11 +55,13 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [sandboxDefenders, setSandboxDefenders] = useState<UnitTemplate[]>([]);
   const [roundLog, setRoundLog] = useState<RoundBattleRecord[]>([]);
   
+  const pantheonRoster = FACTIONS.pantheon.roster;
+
   // Initialize with unique IDs for units
   const initialPool: UnitTemplate[] = [
-    ...Array.from({ length: 6 }, (_, i) => ({ ...UNIT_ROSTER[0], id: `spearman_${i + 1}` })),
-    ...Array.from({ length: 6 }, (_, i) => ({ ...UNIT_ROSTER[1], id: `crossbow_${i + 1}` })),
-    { ...UNIT_ROSTER[2], id: `hero_aric` }
+    ...Array.from({ length: 6 }, (_, i) => ({ ...pantheonRoster[0], id: `spearman_${i + 1}` })),
+    ...Array.from({ length: 6 }, (_, i) => ({ ...pantheonRoster[1], id: `crossbow_${i + 1}` })),
+    { ...pantheonRoster[2], id: `hero_aric` }
   ];
   
   const [globalUnitPool, setGlobalUnitPool] = useState<UnitTemplate[]>(initialPool);
@@ -148,7 +150,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
         } else {
           const sourceUnit = customTemplate || 
             globalUnitPool.find(u => u.id === unitId) || 
-            UNIT_ROSTER.find(u => u.id === unitId || unitId.includes(u.id));
+            Object.values(FACTIONS).flatMap(f => f.catalog).find(u => u.id === unitId || unitId.includes(u.id));
           if (sourceUnit) {
             return [...prev, { ...sourceUnit, id: unitId, gridPosition: gridPos }];
           }
@@ -176,7 +178,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
         } else {
           const sourceUnit = customTemplate || 
             globalUnitPool.find(u => u.id === unitId) || 
-            UNIT_ROSTER.find(u => u.id === unitId || unitId.includes(u.id));
+            Object.values(FACTIONS).flatMap(f => f.catalog).find(u => u.id === unitId || unitId.includes(u.id));
           if (sourceUnit) {
             updatedDefenders = [...t.allocatedDefenders, { ...sourceUnit, id: unitId, gridPosition: gridPos }];
           } else {
@@ -229,7 +231,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const buyUnit = (unitTemplateId: string) => {
-    const template = UNIT_ROSTER.find(u => u.id === unitTemplateId);
+    const template = Object.values(FACTIONS).flatMap(f => f.roster).find(u => u.id === unitTemplateId);
     if (!template || gold < template.cost) return;
 
     setGold(g => g - template.cost);
@@ -296,7 +298,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Decree effects
     if (item.id === 'dec_conscription') {
-      const spearmanTemplate = UNIT_ROSTER[0];
+      const spearmanTemplate = FACTIONS.pantheon.roster[0];
       const newSpearmen: UnitTemplate[] = Array.from({ length: 2 }, (_, i) => ({
         ...spearmanTemplate,
         id: `conscript_spearman_${Date.now()}_${i}`

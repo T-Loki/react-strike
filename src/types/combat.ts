@@ -25,7 +25,22 @@ export interface UnitTemplate {
   attackSpeed: number;
   cost: number;
   abilities: string[];
+  faction: string;
+  weight: number;
+  speed?: number;
+  armor?: number;
+  icon?: string;
+  color?: string;
   gridPosition?: { x: number; y: number };
+}
+
+export interface Faction {
+  id: string;
+  name: string;
+  description: string;
+  garrison: UnitTemplate[];
+  roster: UnitTemplate[];
+  catalog: UnitTemplate[];
 }
 
 export interface Building {
@@ -80,6 +95,8 @@ export interface Unit {
   homeX?: number;
   homeY?: number;
   unitType?: 'common' | 'elite' | 'hero';
+  faction?: 'pantheon' | 'horde';
+  weight?: number;
 }
 
 export interface DamageText {

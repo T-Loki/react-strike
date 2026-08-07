@@ -11,7 +11,7 @@ describe('BattleCanvasOverlay Mode-Specific UI', () => {
   };
 
   const dummyCatalogue = [
-    { label: 'Orc Grunt', icon: '⚔️', color: '#f87171', stats: { name: 'Orc Grunt', hp: 65, maxHp: 65, damage: 9, speed: 70, armor: 1 } }
+    { id: 'unit_orc_grunt', name: 'Orc Grunt', type: 'common' as const, hp: 65, maxHp: 65, damage: 9, range: 35, attackSpeed: 1, cost: 40, abilities: [], faction: 'horde', weight: 1.0, speed: 70, armor: 1, icon: '⚔️', color: '#f87171' }
   ];
 
   it('hides Reset Formation and Spawn Enemies in Valhalla Mode (!isSandboxMode)', () => {
@@ -24,7 +24,7 @@ describe('BattleCanvasOverlay Mode-Specific UI', () => {
         togglePause={() => {}}
         enemyMenuOpen={false}
         setEnemyMenuOpen={() => {}}
-        ENEMY_CATALOGUE={dummyCatalogue}
+        enemyCatalog={dummyCatalogue}
         spawnEnemies={() => {}}
         initBattlefield={() => {}}
         onBackToMap={() => {}}
@@ -50,7 +50,7 @@ describe('BattleCanvasOverlay Mode-Specific UI', () => {
         togglePause={() => {}}
         enemyMenuOpen={false}
         setEnemyMenuOpen={() => {}}
-        ENEMY_CATALOGUE={dummyCatalogue}
+        enemyCatalog={dummyCatalogue}
         spawnEnemies={() => {}}
         initBattlefield={() => {}}
         onBackToMap={() => {}}

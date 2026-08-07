@@ -4,7 +4,7 @@ import type { Unit } from '../../types/combat';
 import { useGameEngine } from '../../hooks/useGameEngine';
 import { useGameEvent } from '../../hooks/useGameEvent';
 import { useCampaign } from '../../context/CampaignContext';
-import { UNIT_ROSTER } from '../../data/units';
+import { FACTIONS } from '../../data/units';
 import { EndlessDoomWave } from '../../core/engine/WaveStrategy';
 import { BattleCanvasRenderer } from './BattleCanvasRenderer';
 import { BattleCanvasOverlay } from './BattleCanvasOverlay';
@@ -54,14 +54,14 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
       if (unitsToLoad.length > 0) {
         engine.loadFormation(unitsToLoad);
       } else {
-        engine.loadFormation(UNIT_ROSTER);
+        engine.loadFormation(FACTIONS.pantheon.roster);
       }
     } else if (activeTerritory && activeTerritory.allocatedDefenders.length > 0) {
       const assigned = activeTerritory.allocatedDefenders.filter(u => u.gridPosition !== undefined);
       const unitsToLoad = assigned.length > 0 ? assigned : activeTerritory.allocatedDefenders;
       engine.loadFormation(unitsToLoad);
     } else {
-      engine.loadFormation(UNIT_ROSTER);
+      engine.loadFormation(FACTIONS.pantheon.roster);
     }
 
     engine.spawnHordeWave(new EndlessDoomWave(), 18);
@@ -80,15 +80,6 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
   const togglePause = () => {
     engine.togglePause();
   };
-
-  const ENEMY_CATALOGUE = [
-    { label: 'Goblin Skirmisher', icon: '🏹', color: '#86efac', stats: { name: 'Goblin Skirmisher', hp: 35, maxHp: 35, damage: 6,  speed: 110, armor: 0 } },
-    { label: 'Orc Grunt',         icon: '⚔️',  color: '#f87171', stats: { name: 'Orc Grunt',         hp: 65, maxHp: 65, damage: 9,  speed: 70,  armor: 1 } },
-    { label: 'Orc Warrior',       icon: '🛡️',  color: '#fb923c', stats: { name: 'Orc Warrior',       hp: 120, maxHp: 120, damage: 14, speed: 60,  armor: 3 } },
-    { label: 'Shadow Warg',       icon: '🐺',  color: '#c084fc', stats: { name: 'Shadow Warg',       hp: 80,  maxHp: 80,  damage: 18, speed: 130, armor: 1 } },
-    { label: 'Horde Berserker',   icon: '💢',  color: '#f43f5e', stats: { name: 'Horde Berserker',   hp: 90,  maxHp: 90,  damage: 22, speed: 95,  armor: 2 } },
-    { label: 'Horde Behemoth',    icon: '💀',  color: '#7f1d1d', stats: { name: 'Horde Behemoth',    hp: 300, maxHp: 300, damage: 30, speed: 40,  armor: 5 } },
-  ] as const;
 
   const spawnEnemies = (stats: Partial<Unit>, count: number) => {
     const { width, height } = engine.getCanvasSize();
@@ -150,7 +141,7 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
           onSurrenderBattle={() => engine.surrenderBattle()}
           enemyMenuOpen={enemyMenuOpen}
           setEnemyMenuOpen={setEnemyMenuOpen}
-          ENEMY_CATALOGUE={ENEMY_CATALOGUE}
+          enemyCatalog={FACTIONS.horde.catalog}
           spawnEnemies={spawnEnemies}
           initBattlefield={initBattlefield}
           onBackToMap={onBackToMap}

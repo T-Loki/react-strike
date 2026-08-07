@@ -38,6 +38,13 @@ export const UnitRosterList: React.FC<Props> = ({
   handleStackClick,
   handleClearAll
 }) => {
+  const [typeFilter, setTypeFilter] = React.useState<'all' | 'hero' | 'common' | 'elite'>('all');
+
+  const filteredStacks = displayStacks.filter(stack => {
+    if (typeFilter === 'all') return true;
+    return stack.type.toLowerCase() === typeFilter;
+  });
+
   return (
     <div className="w-[576px] flex-shrink-0 flex flex-col bg-slate-900 border-r border-slate-800 overflow-hidden">
       <div className="flex-shrink-0 flex justify-between items-center px-4 py-3 border-b border-slate-800">
@@ -66,6 +73,27 @@ export const UnitRosterList: React.FC<Props> = ({
         )}
       </div>
 
+      {/* Filter Tabs by Unit Type: All / Hero / Common / Elite */}
+      <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-slate-950/60 border-b border-slate-800/80">
+        <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Filter:</span>
+        {(['all', 'hero', 'common', 'elite'] as const).map(f => {
+          const isActive = typeFilter === f;
+          return (
+            <button
+              key={f}
+              onClick={() => setTypeFilter(f)}
+              className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                isActive
+                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                  : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              {f}
+            </button>
+          );
+        })}
+      </div>
+
       {selectionLabel && (
         <div className="flex-shrink-0 mx-3 mt-3 px-3 py-2 bg-cyan-950 border border-cyan-700 rounded-lg">
           <p className="text-[11px] text-cyan-300 font-bold flex items-center gap-1">
@@ -79,15 +107,17 @@ export const UnitRosterList: React.FC<Props> = ({
 
       <div className="flex-1 overflow-y-auto p-3">
         <div className="grid grid-cols-2 gap-2">
-        {displayStacks.length === 0 ? (
+        {filteredStacks.length === 0 ? (
           <div className="col-span-2 text-slate-500 text-xs italic py-4 text-center">
-            {assignedUnits.length === 0 
-              ? "No defenders allocated yet. Go to Empire Management to assign troops."
-              : "All defenders deployed!"
+            {displayStacks.length === 0
+              ? (assignedUnits.length === 0 
+                  ? "No defenders allocated yet. Go to Empire Management to assign troops."
+                  : "All defenders deployed!")
+              : `No units matching '${typeFilter.toUpperCase()}' filter.`
             }
           </div>
         ) : (
-          displayStacks.map(stack => {
+          filteredStacks.map(stack => {
             const isSelectedStack = isSandboxSelection
               ? sandboxSelectedName === stack.name
               : selectedUnit && selectedUnit.name === stack.name;

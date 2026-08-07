@@ -26,6 +26,8 @@ export const RingMapView: React.FC<Props> = ({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
+  const touchStartDistanceRef = useRef<number | null>(null);
+  const touchStartZoomRef = useRef<number>(1.0);
 
   const center = { x: 400, y: 300 };
   const positions = territories.map(t => ({
@@ -70,6 +72,56 @@ export const RingMapView: React.FC<Props> = ({
     setZoomScale(prev => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((prev + delta).toFixed(2)))));
   };
 
+  // Touch Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      didDragRef.current = false;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      panStartRef.current = { ...panOffset };
+      touchStartDistanceRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartDistanceRef.current = dist;
+      touchStartZoomRef.current = zoomScale;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const maxPanX = 380;
+    const maxPanY = 280;
+
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragStartRef.current.x;
+      const dy = e.touches[0].clientY - dragStartRef.current.y;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        didDragRef.current = true;
+      }
+
+      setPanOffset({
+        x: Math.max(-maxPanX, Math.min(maxPanX, panStartRef.current.x + dx)),
+        y: Math.max(-maxPanY, Math.min(maxPanY, panStartRef.current.y + dy)),
+      });
+    } else if (e.touches.length === 2 && touchStartDistanceRef.current !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleRatio = dist / touchStartDistanceRef.current;
+      setZoomScale(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((touchStartZoomRef.current * scaleRatio).toFixed(2)))));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistanceRef.current = null;
+  };
+
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomScale(prev => Math.min(MAX_ZOOM, parseFloat((prev + 0.15).toFixed(2))));
@@ -100,6 +152,9 @@ export const RingMapView: React.FC<Props> = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className={`relative w-full h-full min-h-[500px] flex items-center justify-center bg-slate-950 overflow-hidden select-none ${
         isDragging ? 'cursor-grabbing' : 'cursor-grab'
       }`}

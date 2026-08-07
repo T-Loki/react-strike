@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { CampaignProvider, useCampaign } from '../context/CampaignContext';
 
-import { UNIT_ROSTER } from '../data/units';
+import { FACTIONS } from '../data/units';
 
 describe('Location-Unique Deployment Grid Isolation', () => {
   it('isolates sandbox grid position updates from city territory grids', () => {
@@ -17,7 +17,7 @@ describe('Location-Unique Deployment Grid Isolation', () => {
 
     // Place a unit on Sandbox grid
     act(() => {
-      result.current.updateUnitGridPosition('sandbox', 'sandbox_unit_1', { x: 2, y: 3 }, UNIT_ROSTER[0]);
+      result.current.updateUnitGridPosition('sandbox', 'sandbox_unit_1', { x: 2, y: 3 }, FACTIONS.pantheon.roster[0]);
     });
 
     // Sandbox grid should contain the unit

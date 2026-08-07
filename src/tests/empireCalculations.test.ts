@@ -18,10 +18,12 @@ const mockUnit: UnitTemplate = {
 };
 const mockUnit2: UnitTemplate = { ...mockUnit, id: 'u2' };
 
+const mockBuilding = { id: 'b1', name: 'Wall', level: 1, maxLevel: 3, upgradeCost: 100, type: 'defense' as const, effectDescription: '+10 Defense' };
+
 const territories: Territory[] = [
-  { id: 't1', name: 'Safe', isScorched: false, hasActiveBattle: false, resourceYield: 100, ringLevel: 1, allocatedDefenders: [mockUnit] },
-  { id: 't2', name: 'Front', isScorched: false, hasActiveBattle: true, resourceYield: 50, faithYield: 20, ringLevel: 2, allocatedDefenders: [mockUnit, mockUnit2], buildings: ['Wall'] },
-  { id: 't3', name: 'Dead', isScorched: true, hasActiveBattle: true, resourceYield: 500, faithYield: 100, ringLevel: 3, allocatedDefenders: [] }
+  { id: 't1', name: 'Safe', type: 'fortress', isScorched: false, hasActiveBattle: false, resourceYield: 100, ringLevel: 1, allocatedDefenders: [mockUnit], buildings: [] },
+  { id: 't2', name: 'Front', type: 'fortress', isScorched: false, hasActiveBattle: true, resourceYield: 50, faithYield: 20, ringLevel: 2, allocatedDefenders: [mockUnit, mockUnit2], buildings: [mockBuilding] },
+  { id: 't3', name: 'Dead', type: 'fortress', isScorched: true, hasActiveBattle: true, resourceYield: 500, faithYield: 100, ringLevel: 3, allocatedDefenders: [], buildings: [] }
 ];
 
 describe('Empire Calculations', () => {

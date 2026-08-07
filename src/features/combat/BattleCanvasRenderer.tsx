@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Unit } from '../../types/combat';
 import { useGameEngine } from '../../hooks/useGameEngine';
 import { useGameEvent } from '../../hooks/useGameEvent';
-import { getDistance } from '../../core/math/utils';
 import { getSelectedUnitAtCoordinates } from '../../core/math/canvasSelection';
+import { Move, ZoomIn, ZoomOut, Info } from 'lucide-react';
 import {
   DEPLOY_GRID_COLS,
   DEPLOY_GRID_ROWS,
@@ -21,13 +21,135 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engine = useGameEngine();
 
+  // Pan & Zoom State
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [zoomScale, setZoomScale] = useState<number>(1.0);
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 2.5;
+
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const didDragRef = useRef(false);
+  const touchStartDistanceRef = useRef<number | null>(null);
+  const touchStartZoomRef = useRef<number>(1.0);
+
+  // Helper to clamp pan offsets so map cannot be dragged completely out of sight
+  const clampPan = (offset: { x: number; y: number }, scale: number) => {
+    const canvas = canvasRef.current;
+    const w = canvas?.width || window.innerWidth;
+    const h = canvas?.height || window.innerHeight;
+
+    const maxPanX = Math.max(w * 0.3, (w * Math.max(0.2, scale - 0.5)) / 2);
+    const maxPanY = Math.max(h * 0.3, (h * Math.max(0.2, scale - 0.5)) / 2);
+
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, offset.x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, offset.y)),
+    };
+  };
+
+  // Mouse drag & zoom handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    didDragRef.current = false;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    panStartRef.current = { ...panOffset };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      didDragRef.current = true;
+    }
+
+    setPanOffset(clampPan({
+      x: panStartRef.current.x + dx,
+      y: panStartRef.current.y + dy,
+    }, zoomScale));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    setZoomScale(prev => {
+      const nextScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((prev + delta).toFixed(2))));
+      setPanOffset(currentPan => clampPan(currentPan, nextScale));
+      return nextScale;
+    });
+  };
+
+  // Touch drag & pinch zoom handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      didDragRef.current = false;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      panStartRef.current = { ...panOffset };
+      touchStartDistanceRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartDistanceRef.current = dist;
+      touchStartZoomRef.current = zoomScale;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragStartRef.current.x;
+      const dy = e.touches[0].clientY - dragStartRef.current.y;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        didDragRef.current = true;
+      }
+
+      setPanOffset(clampPan({
+        x: panStartRef.current.x + dx,
+        y: panStartRef.current.y + dy,
+      }, zoomScale));
+    } else if (e.touches.length === 2 && touchStartDistanceRef.current !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleRatio = dist / touchStartDistanceRef.current;
+      const nextScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((touchStartZoomRef.current * scaleRatio).toFixed(2))));
+      setZoomScale(nextScale);
+      setPanOffset(currentPan => clampPan(currentPan, nextScale));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistanceRef.current = null;
+  };
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (didDragRef.current) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    const clickX = (screenX - centerX - panOffset.x) / zoomScale + centerX;
+    const clickY = (screenY - centerY - panOffset.y) / zoomScale + centerY;
 
     const entities = engine.getEntities();
     const clicked = getSelectedUnitAtCoordinates(clickX, clickY, entities);
@@ -43,13 +165,24 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
     const width = canvas.width;
     const height = canvas.height;
 
+    // 1. Fill entire screen viewport with dark void background outside the map board
+    ctx.fillStyle = '#030712';
+    ctx.fillRect(0, 0, width, height);
+
     const zoneConfig = engine.getZoneConfig();
 
     const playerSpawnWidth = width * zoneConfig.playerSpawnRatio; 
     const playerAreaWidth = width * zoneConfig.playerAreaRatio;   
     const neutralAreaWidth = width * zoneConfig.neutralAreaRatio; 
 
-    // Base background void
+    ctx.save();
+    const centerX = width / 2;
+    const centerY = height / 2;
+    ctx.translate(centerX + panOffset.x, centerY + panOffset.y);
+    ctx.scale(zoomScale, zoomScale);
+    ctx.translate(-centerX, -centerY);
+
+    // Base map board void background
     ctx.fillStyle = '#070a12';
     ctx.fillRect(0, 0, width, height);
 
@@ -123,26 +256,6 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
     ctx.stroke();
 
     ctx.setLineDash([]);
-
-    ctx.font = 'bold 11px monospace';
-    ctx.textAlign = 'center';
-
-    const pSpawnPct = Math.round(zoneConfig.playerSpawnRatio * 100);
-    const pAreaPct = Math.round(zoneConfig.playerAreaRatio * 100);
-    const neutralPct = Math.round(zoneConfig.neutralAreaRatio * 100);
-
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText(`🛡️ PLAYER AREA (0-${pAreaPct}%)`, playerAreaWidth * 0.5, 110);
-    ctx.font = '9px monospace';
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
-    ctx.fillText(`Spawn (0-${pSpawnPct}%) | Movement & Defense Zone (${pSpawnPct}-${pAreaPct}%)`, playerAreaWidth * 0.5, 124);
-
-    ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillText(`⚔️ NEUTRAL NO-MAN'S LAND (${pAreaPct}-${neutralPct}%)`, playerAreaWidth + (neutralAreaWidth - playerAreaWidth) * 0.5, 110);
-
-    ctx.fillStyle = '#f87171';
-    ctx.fillText(`💀 HORDE SPAWN ZONE (${neutralPct}-100%)`, neutralAreaWidth + (width - neutralAreaWidth) * 0.5, 110);
 
     {
       const gridMarginY = getDeployMarginY(height);
@@ -296,6 +409,13 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
       ctx.fillText(dt.text, dt.x, dt.y);
       ctx.globalAlpha = 1.0;
     });
+
+    // Map Board Outer Boundary Glow & Border
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, width, height);
+
+    ctx.restore();
   });
 
   useEffect(() => {
@@ -314,10 +434,102 @@ export const BattleCanvasRenderer: React.FC<Props> = ({ selectedUnit, setSelecte
   }, [engine]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      onClick={handleCanvasClick}
-      className="absolute inset-0 z-0 block w-full h-full cursor-crosshair"
-    />
+    <div className="relative w-full h-full">
+      {/* Pan & Zoom Controls HUD + Zone Legend Box */}
+      <div className="absolute top-20 left-6 z-20 flex items-start gap-3 font-sans">
+        {/* Zoom Bar */}
+        <div className="flex items-center gap-2 bg-slate-900/85 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-400 shadow-md">
+          <span className="flex items-center gap-1 text-slate-300 font-semibold mr-2">
+            <Move className="w-3.5 h-3.5 text-cyan-400" /> Scroll / Drag Map
+          </span>
+          <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomScale(prev => Math.max(MIN_ZOOM, parseFloat((prev - 0.15).toFixed(2))));
+              }}
+              disabled={zoomScale <= MIN_ZOOM}
+              className="p-1 hover:bg-slate-800 text-slate-300 disabled:opacity-30 rounded transition-colors"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[11px] font-mono font-bold text-amber-400 w-10 text-center">
+              {Math.round(zoomScale * 100)}%
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomScale(prev => Math.min(MAX_ZOOM, parseFloat((prev + 0.15).toFixed(2))));
+              }}
+              disabled={zoomScale >= MAX_ZOOM}
+              className="p-1 hover:bg-slate-800 text-slate-300 disabled:opacity-30 rounded transition-colors"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {(panOffset.x !== 0 || panOffset.y !== 0 || zoomScale !== 1.0) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPanOffset({ x: 0, y: 0 });
+                setZoomScale(1.0);
+              }}
+              className="ml-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded text-[11px] font-bold transition-colors"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Zone Intel Legend Box (Positioned to the right of zoom bar) */}
+        <div className="relative group">
+          <details className="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg shadow-md text-xs text-slate-300">
+            <summary className="px-3.5 py-1.5 cursor-pointer font-bold flex items-center gap-1.5 text-amber-400 hover:text-amber-300 list-none select-none">
+              <Info className="w-4 h-4 text-cyan-400" /> Zone Legend
+            </summary>
+            <div className="p-3.5 border-t border-slate-800 space-y-2.5 text-xs w-72 bg-slate-950/95 rounded-b-lg">
+              <div className="flex items-start gap-2.5">
+                <div className="w-3.5 h-3.5 mt-0.5 rounded bg-blue-500/40 border border-blue-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-blue-400 text-xs">Player Area (0–35%)</span>
+                  <p className="text-xs text-slate-300 leading-normal mt-0.5">Defensive deployment & hero movement zone.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-3.5 h-3.5 mt-0.5 rounded bg-amber-500/40 border border-amber-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-amber-400 text-xs">No-Man's Land (35–75%)</span>
+                  <p className="text-xs text-slate-300 leading-normal mt-0.5">Neutral skirmish & engagement zone.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="w-3.5 h-3.5 mt-0.5 rounded bg-red-500/40 border border-red-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-red-400 text-xs">Horde Spawn (75–100%)</span>
+                  <p className="text-xs text-slate-300 leading-normal mt-0.5">Enemy attack vector & spawn origin.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <canvas
+        ref={canvasRef}
+        onClick={handleCanvasClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`absolute inset-0 z-0 block w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      />
+    </div>
   );
 };
+

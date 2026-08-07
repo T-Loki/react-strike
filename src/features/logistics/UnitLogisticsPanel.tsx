@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Territory, UnitTemplate } from '../../types/combat';
-import { UNIT_ROSTER } from '../../data/units';
+import { FACTIONS } from '../../data/units';
 import { Users, Coins, Shield, ArrowLeftRight } from 'lucide-react';
 import { groupUnitsIntoStackMap, groupAssignedDefendersIntoStacks } from '../../core/math/empireCalculations';
 import type { UnitStack } from '../../core/math/empireCalculations';
@@ -18,7 +18,7 @@ interface Props {
 }
 
 // Non-hero unit templates available for purchase in the recruitment store
-const PURCHASABLE_UNITS = UNIT_ROSTER.filter(u => u.type !== 'hero');
+const PURCHASABLE_UNITS = FACTIONS.pantheon.roster.filter(u => u.type !== 'hero');
 
 export const UnitLogisticsPanel: React.FC<Props> = ({
   territories,

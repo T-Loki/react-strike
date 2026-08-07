@@ -29,6 +29,17 @@ export const FormationGrid: React.FC<Props> = ({ assignedUnits, isAnySelected, h
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const didDragRef = useRef(false);
+  const touchStartDistanceRef = useRef<number | null>(null);
+  const touchStartZoomRef = useRef<number>(1.0);
+
+  const clampPan = (offset: { x: number; y: number }, scale: number) => {
+    const maxPanX = Math.max(180, 250 * scale);
+    const maxPanY = Math.max(140, 200 * scale);
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, offset.x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, offset.y)),
+    };
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -47,10 +58,10 @@ export const FormationGrid: React.FC<Props> = ({ assignedUnits, isAnySelected, h
       didDragRef.current = true;
     }
 
-    setPanOffset({
+    setPanOffset(clampPan({
       x: panStartRef.current.x + dx,
       y: panStartRef.current.y + dy,
-    });
+    }, zoomScale));
   };
 
   const handleMouseUp = () => {
@@ -59,7 +70,59 @@ export const FormationGrid: React.FC<Props> = ({ assignedUnits, isAnySelected, h
 
   const handleWheel = (e: React.WheelEvent) => {
     const delta = e.deltaY < 0 ? 0.1 : -0.1;
-    setZoomScale(prev => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((prev + delta).toFixed(2)))));
+    setZoomScale(prev => {
+      const nextScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((prev + delta).toFixed(2))));
+      setPanOffset(currentPan => clampPan(currentPan, nextScale));
+      return nextScale;
+    });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      didDragRef.current = false;
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      panStartRef.current = { ...panOffset };
+      touchStartDistanceRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartDistanceRef.current = dist;
+      touchStartZoomRef.current = zoomScale;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      const dx = e.touches[0].clientX - dragStartRef.current.x;
+      const dy = e.touches[0].clientY - dragStartRef.current.y;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        didDragRef.current = true;
+      }
+
+      setPanOffset(clampPan({
+        x: panStartRef.current.x + dx,
+        y: panStartRef.current.y + dy,
+      }, zoomScale));
+    } else if (e.touches.length === 2 && touchStartDistanceRef.current !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleRatio = dist / touchStartDistanceRef.current;
+      const nextScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, parseFloat((touchStartZoomRef.current * scaleRatio).toFixed(2))));
+      setZoomScale(nextScale);
+      setPanOffset(currentPan => clampPan(currentPan, nextScale));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistanceRef.current = null;
   };
 
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -91,6 +154,9 @@ export const FormationGrid: React.FC<Props> = ({ assignedUnits, isAnySelected, h
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className={`flex-1 relative flex flex-col items-center justify-center bg-slate-950 overflow-hidden select-none p-6 ${
         isDragging ? 'cursor-grabbing' : 'cursor-grab'
       }`}

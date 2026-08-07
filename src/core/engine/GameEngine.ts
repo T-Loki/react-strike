@@ -3,7 +3,7 @@ import type { Unit, DamageText, AttackEffect, BattlePhase, UnitTemplate, Battlef
 import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
 import { UnitEntity, type SimulationContext } from '../entities/UnitEntity';
 import { UnitFactory } from '../factories/UnitFactory';
-import { UNIT_ROSTER } from '../../data/units';
+import { FACTIONS } from '../../data/units';
 import { type WaveStrategy, SkirmishWave } from './WaveStrategy';
 import { DEPLOY_GRID_COLS } from '../factories/UnitFactory';
 import { getDirection } from '../math/utils';
@@ -102,13 +102,7 @@ export class GameEngine {
 
   public loadFormation(templates: UnitTemplate[]): void {
     this.clearBoard();
-    const sourceTemplates = templates.length > 0 ? templates : (
-      UNIT_ROSTER.length > 0 ? UNIT_ROSTER : [
-        { id: '1', name: 'Vanguard Spearman', type: 'common' as const, hp: 120, maxHp: 120, damage: 15, range: 60, attackSpeed: 1, cost: 50, abilities: [] },
-        { id: '2', name: 'Iron Crossbow', type: 'common' as const, hp: 80, maxHp: 80, damage: 25, range: 200, attackSpeed: 0.8, cost: 75, abilities: [] },
-        { id: '3', name: 'Aric the Shieldbreaker', type: 'hero' as const, hp: 500, maxHp: 500, damage: 40, range: 50, attackSpeed: 1, cost: 300, abilities: [] }
-      ]
-    );
+    const sourceTemplates = templates.length > 0 ? templates : FACTIONS.pantheon.roster;
 
     const usedCoords = new Set<string>();
     sourceTemplates.forEach(t => {
@@ -256,11 +250,13 @@ export class GameEngine {
         const u1 = activeEntities[i];
         const isHero1 = u1.data.unitType === 'hero';
         const r1 = isHero1 ? 16 : 10;
+        const w1 = u1.data.weight || (isHero1 ? 3.0 : 1.0);
 
         for (let j = i + 1; j < count; j++) {
           const u2 = activeEntities[j];
           const isHero2 = u2.data.unitType === 'hero';
           const r2 = isHero2 ? 16 : 10;
+          const w2 = u2.data.weight || (isHero2 ? 3.0 : 1.0);
 
           const minDist = r1 + r2 + 4;
           let { dx, dy, dist } = getDirection(u2.data.x, u2.data.y, u1.data.x, u1.data.y);
@@ -274,13 +270,17 @@ export class GameEngine {
             }
 
             const overlap = minDist - dist;
-            const pushAmount = overlap * 0.5;
+            const totalWeight = w1 + w2;
 
-            u1.data.x += dx * pushAmount;
-            u1.data.y += dy * pushAmount;
+            // Mass-weighted pushing: heavier unit moves less, lighter unit absorbs more displacement
+            const u1Share = w2 / totalWeight;
+            const u2Share = w1 / totalWeight;
 
-            u2.data.x -= dx * pushAmount;
-            u2.data.y -= dy * pushAmount;
+            u1.data.x += dx * overlap * u1Share;
+            u1.data.y += dy * overlap * u1Share;
+
+            u2.data.x -= dx * overlap * u2Share;
+            u2.data.y -= dy * overlap * u2Share;
           }
         }
       }

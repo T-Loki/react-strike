@@ -1,6 +1,6 @@
 import React from 'react';
 import type { GameState } from '../../types/game';
-import type { Unit } from '../../types/combat';
+import type { Unit, UnitTemplate } from '../../types/combat';
 import { ArrowLeft, Pause, Play, FastForward, RefreshCw, Skull, Shield, Info, X, ChevronUp, ChevronDown, Swords, Flag } from 'lucide-react';
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
   onSurrenderBattle?: () => void;
   enemyMenuOpen: boolean;
   setEnemyMenuOpen: (val: boolean | ((prev: boolean) => boolean)) => void;
-  ENEMY_CATALOGUE: readonly { label: string; icon: string; color: string; stats: Partial<Unit>; }[];
+  enemyCatalog: UnitTemplate[];
   spawnEnemies: (stats: Partial<Unit>, count: number) => void;
   initBattlefield: () => void;
   onBackToMap?: () => void;
@@ -49,7 +49,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
   onSurrenderBattle,
   enemyMenuOpen,
   setEnemyMenuOpen,
-  ENEMY_CATALOGUE,
+  enemyCatalog,
   spawnEnemies,
   initBattlefield,
   onBackToMap,
@@ -169,6 +169,12 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
           </div>
           <div className="space-y-1.5 font-mono text-slate-300">
             <div className="flex justify-between">
+              <span className="opacity-60">Faction:</span>
+              <span className={`font-bold uppercase ${selectedUnit.unit.faction === 'pantheon' ? 'text-amber-400' : 'text-red-400'}`}>
+                {selectedUnit.unit.faction || (selectedUnit.unit.team === 'defender' ? 'pantheon' : 'horde')}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="opacity-60">Team:</span>
               <span className={`font-bold uppercase ${selectedUnit.unit.team === 'defender' ? 'text-emerald-400' : 'text-red-400'}`}>
                 {selectedUnit.unit.team}
@@ -185,6 +191,10 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
             <div className="flex justify-between">
               <span className="opacity-60">Armor:</span>
               <span className="text-cyan-400 font-bold">{selectedUnit.unit.armor || 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="opacity-60">Weight (Mass):</span>
+              <span className="text-purple-300 font-bold">{selectedUnit.unit.weight ?? 1.0}</span>
             </div>
             <div className="flex justify-between">
               <span className="opacity-60">Range:</span>
@@ -211,24 +221,33 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                {ENEMY_CATALOGUE.map(entry => (
+                {enemyCatalog.map(entry => (
                   <div
-                    key={entry.label}
+                    key={entry.id || entry.name}
                     className="flex items-center gap-3 bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-xl px-3 py-2 transition-colors"
                   >
-                    <span className="text-lg leading-none select-none">{entry.icon}</span>
+                    <span className="text-lg leading-none select-none">{entry.icon || '⚔️'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{entry.label}</p>
+                      <p className="text-xs font-bold text-white truncate">{entry.name}</p>
                       <p className="text-[10px] text-slate-500 font-mono">
-                        HP {entry.stats.hp} · DMG {entry.stats.damage} · SPD {entry.stats.speed}
-                        {(entry.stats.armor ?? 0) > 0 ? ` · ARM ${entry.stats.armor}` : ''}
+                        HP {entry.hp} · DMG {entry.damage} · SPD {entry.speed ?? 70}
+                        {(entry.armor ?? 0) > 0 ? ` · ARM ${entry.armor}` : ''}
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">
                       {([1, 5, 10] as const).map(n => (
                         <button
                           key={n}
-                          onClick={() => spawnEnemies(entry.stats, n)}
+                          onClick={() => spawnEnemies({
+                            name: entry.name,
+                            hp: entry.hp,
+                            maxHp: entry.maxHp,
+                            damage: entry.damage,
+                            speed: entry.speed ?? 70,
+                            armor: entry.armor ?? 0,
+                            faction: entry.faction,
+                            weight: entry.weight
+                          }, n)}
                           className="px-2 py-1 rounded-lg text-[10px] font-black border border-red-800/60 hover:bg-red-900/30 text-red-300 transition-colors"
                         >
                           +{n}

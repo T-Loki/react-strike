@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { SandboxOrchestrator } from '../features/combat/SandboxOrchestrator';
 import { CampaignProvider } from '../context/CampaignContext';
 import { GameEngine } from '../core/engine/GameEngine';
