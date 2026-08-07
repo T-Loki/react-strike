@@ -1,3 +1,6 @@
+export type DamageType = 'Normal' | 'Piercing' | 'Siege' | 'Magic' | 'Hero';
+export type ArmorType = 'Unarmored' | 'Light' | 'Medium' | 'Heavy' | 'Fortified' | 'Hero';
+
 export interface DefensiveRing {
   ringId: number;
   name: string;
@@ -25,10 +28,12 @@ export interface UnitTemplate {
   attackSpeed: number;
   cost: number;
   abilities: string[];
-  faction: string;
-  weight: number;
+  faction?: string;
+  weight?: number;
   speed?: number;
   armor?: number;
+  damageType?: DamageType;
+  armorType?: ArmorType;
   icon?: string;
   color?: string;
   gridPosition?: { x: number; y: number };
@@ -79,6 +84,8 @@ export interface Unit {
   maxHp: number;
   damage: number;
   armor: number;
+  damageType?: DamageType;
+  armorType?: ArmorType;
   range: number;
   attackRange: number;
   attackCooldown: number;

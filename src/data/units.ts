@@ -17,6 +17,8 @@ export const GARRISON_SOLDIER: UnitTemplate = {
   weight: 1.0,
   speed: 85,
   armor: 2,
+  damageType: 'Normal',
+  armorType: 'Medium',
   icon: '🛡️',
   color: '#22c55e',
 };
@@ -36,6 +38,8 @@ export const CITY_MILITIA: UnitTemplate = {
   weight: 0.8,
   speed: 80,
   armor: 1,
+  damageType: 'Normal',
+  armorType: 'Light',
   icon: '🗡️',
   color: '#4ade80',
 };
@@ -55,6 +59,8 @@ export const VANGUARD_SPEARMAN: UnitTemplate = {
   weight: 1.0,
   speed: 85,
   armor: 2,
+  damageType: 'Piercing',
+  armorType: 'Medium',
   icon: '⚔️',
   color: '#22c55e',
 };
@@ -74,6 +80,8 @@ export const IRON_CROSSBOW: UnitTemplate = {
   weight: 0.8,
   speed: 80,
   armor: 1,
+  damageType: 'Piercing',
+  armorType: 'Light',
   icon: '🏹',
   color: '#38bdf8',
 };
@@ -93,6 +101,8 @@ export const ARIC_SHIELDBREAKER: UnitTemplate = {
   weight: 10.0,
   speed: 100,
   armor: 8,
+  damageType: 'Hero',
+  armorType: 'Hero',
   icon: '👑',
   color: '#f59e0b',
 };
@@ -114,6 +124,8 @@ export const GOBLIN_SKIRMISHER: UnitTemplate = {
   weight: 0.6,
   speed: 110,
   armor: 0,
+  damageType: 'Piercing',
+  armorType: 'Light',
   icon: '🏹',
   color: '#86efac',
 };
@@ -133,6 +145,8 @@ export const ORC_GRUNT: UnitTemplate = {
   weight: 1.0,
   speed: 70,
   armor: 1,
+  damageType: 'Normal',
+  armorType: 'Medium',
   icon: '⚔️',
   color: '#f87171',
 };
@@ -152,6 +166,8 @@ export const ORC_WARRIOR: UnitTemplate = {
   weight: 1.5,
   speed: 60,
   armor: 3,
+  damageType: 'Normal',
+  armorType: 'Heavy',
   icon: '🛡️',
   color: '#fb923c',
 };
@@ -171,6 +187,8 @@ export const SHADOW_WARG: UnitTemplate = {
   weight: 1.2,
   speed: 130,
   armor: 1,
+  damageType: 'Normal',
+  armorType: 'Light',
   icon: '🐺',
   color: '#c084fc',
 };
@@ -190,6 +208,8 @@ export const HORDE_BERSERKER: UnitTemplate = {
   weight: 1.4,
   speed: 95,
   armor: 2,
+  damageType: 'Normal',
+  armorType: 'Light',
   icon: '💢',
   color: '#f43f5e',
 };
@@ -209,6 +229,8 @@ export const HORDE_BEHEMOTH: UnitTemplate = {
   weight: 3.5,
   speed: 40,
   armor: 5,
+  damageType: 'Siege',
+  armorType: 'Fortified',
   icon: '💀',
   color: '#7f1d1d',
 };

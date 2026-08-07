@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Territory, UnitTemplate } from '../../types/combat';
 import { FACTIONS } from '../../data/units';
-import { Users, Coins, Shield, ArrowLeftRight } from 'lucide-react';
+import { Users, Coins, Shield, ArrowLeftRight, Swords } from 'lucide-react';
 import { groupUnitsIntoStackMap, groupAssignedDefendersIntoStacks } from '../../core/math/empireCalculations';
 import type { UnitStack } from '../../core/math/empireCalculations';
+import { DAMAGE_TYPE_DESCRIPTIONS, ARMOR_TYPE_DESCRIPTIONS } from '../../core/math/combatMath';
+import { DamageMatrixModal } from '../../components/DamageMatrixModal';
 
 interface Props {
   territories: Territory[];
@@ -31,6 +33,7 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
   onBuyUnit,
   onTransferUnits,
 }) => {
+  const [showMatrixModal, setShowMatrixModal] = useState(false);
   const activeTerritories = territories.filter(t => !t.isScorched);
   const currentTerritoryId = selectedTerritoryId || (activeTerritories[0]?.id ?? '');
   const selectedTerritory = territories.find(t => t.id === currentTerritoryId);
@@ -67,14 +70,22 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
   return (
     <div className="w-full h-full flex flex-col bg-slate-900 overflow-hidden select-none">
       {/* Header */}
-      <div className="p-4 bg-slate-950 border-b border-slate-800">
-        <h2 className="text-xl font-bold font-serif text-white flex items-center gap-2">
-          <Users className="w-5 h-5 text-amber-400" />
-          Allocate Troops to {selectedTerritory ? selectedTerritory.name : 'Territory'}
-        </h2>
-        <p className="text-slate-400 text-xs mt-0.5">
-          Recruit reinforcements directly into your reserve pool and deploy unit stacks to front-line garrisons.
-        </p>
+      <div className="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold font-serif text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-amber-400" />
+            Allocate Troops to {selectedTerritory ? selectedTerritory.name : 'Territory'}
+          </h2>
+          <p className="text-slate-400 text-xs mt-0.5">
+            Recruit reinforcements directly into your reserve pool and deploy unit stacks to front-line garrisons.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowMatrixModal(true)}
+          className="px-3.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/50 text-amber-300 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-all flex-shrink-0"
+        >
+          <Swords className="w-4 h-4 text-amber-400" /> Damage Matrix
+        </button>
       </div>
 
       {/* 2 Side-by-Side Columns */}
@@ -115,8 +126,22 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
                           {template.type}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400 uppercase mt-0.5">
-                        HP: {template.hp} | DMG: {template.damage} | Range: {template.range}
+                      <div className="text-[11px] text-slate-400 uppercase mt-0.5 flex items-center gap-2">
+                        <span>HP: {template.hp} | DMG: {template.damage} | Range: {template.range}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
+                        <span 
+                          title={DAMAGE_TYPE_DESCRIPTIONS[template.damageType || 'Normal']} 
+                          className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
+                        >
+                          ATK: {template.damageType || 'Normal'}
+                        </span>
+                        <span 
+                          title={ARMOR_TYPE_DESCRIPTIONS[template.armorType || 'Medium']} 
+                          className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
+                        >
+                          DEF: {template.armorType || 'Medium'}
+                        </span>
                       </div>
                     </div>
 
@@ -195,6 +220,20 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
                         </div>
                         <div className="text-[11px] text-slate-400 uppercase mt-0.5">
                           HP: {sample.hp} | DMG: {sample.damage}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
+                          <span 
+                            title={DAMAGE_TYPE_DESCRIPTIONS[sample.damageType || 'Hero']} 
+                            className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
+                          >
+                            ATK: {sample.damageType || 'Hero'}
+                          </span>
+                          <span 
+                            title={ARMOR_TYPE_DESCRIPTIONS[sample.armorType || 'Hero']} 
+                            className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
+                          >
+                            DEF: {sample.armorType || 'Hero'}
+                          </span>
                         </div>
                       </div>
                       <span className="text-xs font-bold text-amber-300 font-mono px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded">
@@ -292,6 +331,20 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
                     <div className="text-[11px] text-slate-400 uppercase mt-0.5">
                       HP: {stack.hp} | DMG: {stack.damage}
                     </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
+                      <span 
+                        title={DAMAGE_TYPE_DESCRIPTIONS[stack.units[0]?.damageType || 'Normal']} 
+                        className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
+                      >
+                        ATK: {stack.units[0]?.damageType || 'Normal'}
+                      </span>
+                      <span 
+                        title={ARMOR_TYPE_DESCRIPTIONS[stack.units[0]?.armorType || 'Medium']} 
+                        className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
+                      >
+                        DEF: {stack.units[0]?.armorType || 'Medium'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Standardised Recall Action */}
@@ -328,6 +381,11 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      <DamageMatrixModal 
+        isOpen={showMatrixModal}
+        onClose={() => setShowMatrixModal(false)}
+      />
     </div>
   );
 };

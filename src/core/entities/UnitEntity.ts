@@ -1,6 +1,7 @@
 import type { Unit, BattlefieldZoneConfig } from '../../types/combat';
 import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
 import { getDistance, getDirection } from '../math/utils';
+import { calculateDamage } from '../math/combatMath';
 
 export interface SimulationContext {
   canvasWidth: number;
@@ -181,9 +182,7 @@ export class AttackState implements UnitBehaviorState {
       unit.lastAttackTime = context.now;
       unit.attackAnimTimer = 150;
 
-      const rawDamage = isNaN(unit.damage) ? 0 : unit.damage;
-      const targetArmor = isNaN(targetUnit.armor || 0) ? 0 : (targetUnit.armor || 0);
-      const actualDamage = Math.max(1, rawDamage - targetArmor);
+      const actualDamage = calculateDamage(unit.damage, unit.damageType, targetUnit.armor, targetUnit.armorType);
 
       context.onDealDamage(unit, targetUnit, actualDamage);
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Layers, Infinity, UserCheck } from 'lucide-react';
 
 import type { UnitTemplate } from '../../types/combat';
+import { DAMAGE_TYPE_DESCRIPTIONS, ARMOR_TYPE_DESCRIPTIONS } from '../../core/math/combatMath';
 
 export type StackEntry = {
   name: string;
@@ -121,6 +122,10 @@ export const UnitRosterList: React.FC<Props> = ({
             const isSelectedStack = isSandboxSelection
               ? sandboxSelectedName === stack.name
               : selectedUnit && selectedUnit.name === stack.name;
+            const sampleUnit = stack.template || stack.units[0];
+            const damageType = sampleUnit?.damageType || 'Normal';
+            const armorType = sampleUnit?.armorType || 'Medium';
+
             return (
               <button
                 key={stack.name}
@@ -156,6 +161,21 @@ export const UnitRosterList: React.FC<Props> = ({
                 <div className="text-[11px] text-slate-400 mt-2 font-mono flex justify-between w-full">
                   <span>HP: {stack.hp}</span>
                   <span>DMG: {stack.damage}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 mt-2 text-[10px] font-mono w-full">
+                  <span 
+                    title={DAMAGE_TYPE_DESCRIPTIONS[damageType]} 
+                    className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
+                  >
+                    ATK: {damageType}
+                  </span>
+                  <span 
+                    title={ARMOR_TYPE_DESCRIPTIONS[armorType]} 
+                    className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
+                  >
+                    DEF: {armorType}
+                  </span>
                 </div>
 
                 {isSelectedStack && (

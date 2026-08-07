@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useCampaign } from '../../context/CampaignContext';
 import type { GameState } from '../../types/game';
 import type { UnitTemplate } from '../../types/combat';
-import { Shield, Play, ArrowLeft, FlaskConical, Home } from 'lucide-react';
+import { Shield, Play, ArrowLeft, FlaskConical, Home, Swords } from 'lucide-react';
 import { FACTIONS } from '../../data/units';
 import { FormationGrid } from './FormationGrid';
 import { UnitRosterList, type StackEntry } from './UnitRosterList';
 import { DEPLOY_GRID_COLS, DEPLOY_GRID_ROWS } from '../../core/factories/UnitFactory';
+import { DamageMatrixModal } from '../../components/DamageMatrixModal';
 
 interface Props {
   onStartBattle?: () => void;
@@ -28,6 +29,7 @@ export const PreBattleSetup: React.FC<Props> = ({
 }) => {
   const { territories, globalUnitPool, sandboxDefenders, updateUnitGridPosition } = useCampaign();
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [showMatrixModal, setShowMatrixModal] = useState(false);
 
   const territory = territories.find(t => t.hasActiveBattle) || territories[0];
   const activeLocationId = isSandboxMode ? 'sandbox' : territory.id;
@@ -232,6 +234,13 @@ export const PreBattleSetup: React.FC<Props> = ({
 
         {/* Top Header Navigation Buttons (Non-overlapping) */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowMatrixModal(true)}
+            className="px-3 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/50 text-amber-300 rounded-lg font-bold text-xs flex items-center gap-1.5 shadow transition-all"
+          >
+            <Swords className="w-3.5 h-3.5 text-amber-400" /> Damage Matrix
+          </button>
+
           {!isSandboxMode && onNavigate && (
             <button 
               onClick={() => onNavigate('sandbox')}
@@ -293,6 +302,11 @@ export const PreBattleSetup: React.FC<Props> = ({
           </button>
         )}
       </div>
+
+      <DamageMatrixModal 
+        isOpen={showMatrixModal}
+        onClose={() => setShowMatrixModal(false)}
+      />
     </div>
   );
 };

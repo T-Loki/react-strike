@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { getDistance, getDirection, isInRange, getHealthPercentage } from '../core/math/utils';
-import type { Territory } from '../types/combat';
+import { 
+  DAMAGE_MULTIPLIER_MATRIX, 
+  getDamageMultiplier, 
+  calculateDamage 
+} from '../core/math/combatMath';
+import type { Territory, DamageType, ArmorType } from '../types/combat';
 
 // Mock function for scorched payout as requested to keep in tests or logic
 const calculateScorchedPayout = (_territory: Territory) => {
@@ -58,5 +63,92 @@ describe('Combat Math Utils', () => {
     expect(dirInf.dist).toBe(0);
     expect(dirInf.dx).toBe(0);
     expect(dirInf.dy).toBe(0);
+  });
+});
+
+describe('RTS Damage & Armor Matrix System', () => {
+  it('verifies all expected multipliers in DAMAGE_MULTIPLIER_MATRIX', () => {
+    // Normal damage
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Unarmored).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Light).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Medium).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Heavy).toBe(0.75);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Fortified).toBe(0.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Normal.Hero).toBe(0.5);
+
+    // Piercing damage
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Unarmored).toBe(1.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Light).toBe(1.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Medium).toBe(0.75);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Heavy).toBe(0.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Fortified).toBe(0.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Piercing.Hero).toBe(1.0);
+
+    // Siege damage
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Unarmored).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Light).toBe(0.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Medium).toBe(0.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Heavy).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Fortified).toBe(1.5);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Siege.Hero).toBe(0.5);
+
+    // Magic damage
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Unarmored).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Light).toBe(0.75);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Medium).toBe(1.25);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Heavy).toBe(1.25);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Fortified).toBe(0.35);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Magic.Hero).toBe(1.0);
+
+    // Hero damage
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Unarmored).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Light).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Medium).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Heavy).toBe(1.0);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Fortified).toBe(0.75);
+    expect(DAMAGE_MULTIPLIER_MATRIX.Hero.Hero).toBe(1.0);
+  });
+
+  it('falls back to 1.0 multiplier when damage or armor types are undefined/invalid', () => {
+    expect(getDamageMultiplier(undefined, 'Light')).toBe(1.0);
+    expect(getDamageMultiplier('Piercing', undefined)).toBe(1.0);
+    expect(getDamageMultiplier(undefined, undefined)).toBe(1.0);
+    expect(getDamageMultiplier('Invalid' as DamageType, 'Light')).toBe(1.0);
+    expect(getDamageMultiplier('Piercing', 'Invalid' as ArmorType)).toBe(1.0);
+  });
+
+  it('calculates final damage correctly applying matrix multipliers and flat armor', () => {
+    // 20 Piercing vs Light (1.5x) - 2 Armor -> floor(30 - 2) = 28
+    expect(calculateDamage(20, 'Piercing', 2, 'Light')).toBe(28);
+
+    // 20 Piercing vs Medium (0.75x) - 2 Armor -> floor(15 - 2) = 13
+    expect(calculateDamage(20, 'Piercing', 2, 'Medium')).toBe(13);
+
+    // 30 Siege vs Fortified (1.5x) - 5 Armor -> floor(45 - 5) = 40
+    expect(calculateDamage(30, 'Siege', 5, 'Fortified')).toBe(40);
+
+    // 20 Magic vs Heavy (1.25x) - 3 Armor -> floor(25 - 3) = 22
+    expect(calculateDamage(20, 'Magic', 3, 'Heavy')).toBe(22);
+
+    // 40 Hero vs Fortified (0.75x) - 8 Armor -> floor(30 - 8) = 22
+    expect(calculateDamage(40, 'Hero', 8, 'Fortified')).toBe(22);
+  });
+
+  it('ensures minimum 1 damage output and protects against extreme flat armor', () => {
+    // 10 Normal vs Heavy (0.75x -> 7.5) - 50 Armor -> Math.max(1, Math.floor(-42.5)) = 1
+    expect(calculateDamage(10, 'Normal', 50, 'Heavy')).toBe(1);
+
+    // 0 base damage -> minimum output 1
+    expect(calculateDamage(0, 'Normal', 0, 'Light')).toBe(1);
+
+    // Negative base damage -> minimum output 1
+    expect(calculateDamage(-20, 'Normal', 0, 'Light')).toBe(1);
+  });
+
+  it('protects against NaN and Infinity inputs in calculateDamage', () => {
+    expect(calculateDamage(NaN, 'Normal', 0, 'Light')).toBe(1);
+    expect(calculateDamage(20, 'Normal', NaN, 'Light')).toBe(20);
+    expect(calculateDamage(Infinity, 'Normal', 0, 'Light')).toBe(1);
+    expect(calculateDamage(20, 'Normal', Infinity, 'Light')).toBe(1);
   });
 });

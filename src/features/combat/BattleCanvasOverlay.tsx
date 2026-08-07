@@ -245,7 +245,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
                             damage: entry.damage,
                             speed: entry.speed ?? 70,
                             armor: entry.armor ?? 0,
-                            faction: entry.faction,
+                            faction: (entry.faction as 'pantheon' | 'horde') || 'horde',
                             weight: entry.weight
                           }, n)}
                           className="px-2 py-1 rounded-lg text-[10px] font-black border border-red-800/60 hover:bg-red-900/30 text-red-300 transition-colors"

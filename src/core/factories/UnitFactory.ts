@@ -29,6 +29,14 @@ export class UnitFactory {
     }
 
     const defaultWeight = template?.weight ?? (unitType === 'hero' ? 3.0 : unitType === 'elite' ? 1.8 : 1.0);
+    const defaultDamageType = template?.damageType ?? (
+      unitType === 'hero' ? 'Hero' :
+      (nameLower.includes('crossbow') || nameLower.includes('archer') || nameLower.includes('spearman')) ? 'Piercing' : 'Normal'
+    );
+    const defaultArmorType = template?.armorType ?? (
+      unitType === 'hero' ? 'Hero' :
+      unitType === 'elite' ? 'Heavy' : 'Medium'
+    );
 
     return {
       id: template?.id || `defender-${Math.random().toString(36).substring(2, 9)}`,
@@ -37,6 +45,8 @@ export class UnitFactory {
       maxHp: template?.maxHp ?? template?.hp ?? 120,
       damage: template?.damage ?? 15,
       armor: template?.armor ?? (unitType === 'hero' ? 8 : unitType === 'elite' ? 4 : 2),
+      damageType: defaultDamageType,
+      armorType: defaultArmorType,
       range: template?.range ?? (nameLower.includes('crossbow') ? 200 : 60),
       attackRange: template?.attackRange ?? template?.range ?? (nameLower.includes('crossbow') ? 200 : 60),
       attackCooldown: template?.attackCooldown ?? (nameLower.includes('crossbow') ? 1200 : 900),
@@ -64,6 +74,16 @@ export class UnitFactory {
       nameLower.includes('goblin') ? 0.6 : 1.0
     );
 
+    const defaultDamageType = template?.damageType ?? (
+      nameLower.includes('behemoth') ? 'Siege' :
+      (nameLower.includes('skirmisher') || nameLower.includes('goblin')) ? 'Piercing' : 'Normal'
+    );
+    const defaultArmorType = template?.armorType ?? (
+      nameLower.includes('behemoth') ? 'Fortified' :
+      nameLower.includes('warrior') ? 'Heavy' :
+      (nameLower.includes('skirmisher') || nameLower.includes('warg') || nameLower.includes('berserker')) ? 'Light' : 'Medium'
+    );
+
     return {
       id: template?.id || `horde-${Math.random().toString(36).substring(2, 9)}`,
       name: template?.name || 'Orc Grunt',
@@ -71,6 +91,8 @@ export class UnitFactory {
       maxHp: template?.maxHp ?? 65,
       damage: template?.damage ?? 9,
       armor: template?.armor ?? 1,
+      damageType: defaultDamageType,
+      armorType: defaultArmorType,
       range: template?.range ?? 35,
       attackRange: template?.attackRange ?? template?.range ?? 35,
       attackCooldown: template?.attackCooldown ?? 900,
@@ -129,13 +151,15 @@ export class UnitFactory {
       maxHp: template.maxHp || template.hp,
       damage: template.damage,
       armor: template.armor,
+      damageType: template.damageType,
+      armorType: template.armorType,
       range: template.range,
       attackRange: template.range,
       speed: template.speed,
       color: defaultColor,
       gridPosition: template.gridPosition,
       unitType: template.type,
-      faction: template.faction || 'pantheon',
+      faction: (template.faction as 'pantheon' | 'horde') || 'pantheon',
       weight: template.weight,
     });
   }
