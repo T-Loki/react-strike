@@ -1,10 +1,12 @@
 import { EventBus } from '../events/EventBus';
-import type { Unit, DamageText, AttackEffect, BattlePhase, UnitTemplate, BattlefieldZoneConfig } from '../../types/combat';
+import type { Unit, DamageText, AttackEffect, BattlePhase, UnitTemplate, BattlefieldZoneConfig, SpawnedUnitSpec, WaveContext, WaveInfo } from '../../types/combat';
 import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
 import { UnitEntity, type SimulationContext } from '../entities/UnitEntity';
 import { UnitFactory } from '../factories/UnitFactory';
 import { FACTIONS } from '../../data/units';
-import { type WaveStrategy, SkirmishWave } from './WaveStrategy';
+import type { WaveStrategy } from './WaveStrategy';
+import { WaveStrategyFactory } from '../strategies/WaveStrategyFactory';
+import { getTerritoryWaveProfile } from '../../data/waves';
 import { DEPLOY_GRID_COLS } from '../factories/UnitFactory';
 import { getDirection } from '../math/utils';
 
@@ -27,9 +29,13 @@ export class GameEngine {
   private battlePhase: BattlePhase = 'HOLDING_POSITION';
   private zoneConfig: BattlefieldZoneConfig = DEFAULT_BATTLEFIELD_ZONES;
 
+  private currentWaveContext: WaveContext = {};
+  private activeWaveStrategyName: string = 'ScriptedWaveStrategy';
+
   private constructor() {
     this.events = new EventBus();
   }
+
 
   public static getInstance(): GameEngine {
     if (!GameEngine.instance) {
@@ -133,10 +139,63 @@ export class GameEngine {
     });
   }
 
-  public spawnHordeWave(strategy?: WaveStrategy, count?: number): void {
-    const waveStrategy = strategy || new SkirmishWave();
-    waveStrategy.spawnWave(this, count);
+  public spawnHordeFromSpecs(specs: SpawnedUnitSpec[]): void {
+    specs.forEach(spec => {
+      const unitData = UnitFactory.createHordeFromSpec(spec, this.canvasWidth, this.canvasHeight);
+      this.entities.push(new UnitEntity(unitData));
+      this.events.emit('spawn', unitData);
+    });
   }
+
+  public spawnHordeWave(strategy?: WaveStrategy, contextOrCount?: WaveContext | number): void {
+    let context: WaveContext = {};
+    if (typeof contextOrCount === 'number') {
+      context = { pointBudget: contextOrCount };
+    } else if (contextOrCount) {
+      context = contextOrCount;
+    }
+
+    this.currentWaveContext = context;
+    const waveStrategy = strategy || WaveStrategyFactory.getStrategy(context);
+    this.activeWaveStrategyName = waveStrategy.name;
+
+    if (waveStrategy.generateWave) {
+      const specs = waveStrategy.generateWave(context);
+      if (specs && specs.length > 0) {
+        this.spawnHordeFromSpecs(specs);
+        return;
+      }
+    }
+
+    waveStrategy.spawnWave(this, typeof contextOrCount === 'number' ? contextOrCount : undefined as any);
+  }
+
+  public getWaveInfo(): WaveInfo {
+    const waveIndex = this.currentWaveContext.waveIndex ?? 0;
+    const currentWave = waveIndex + 1;
+
+    if (this.currentWaveContext.isSandbox) {
+      return {
+        currentWave,
+        totalWaves: null,
+        waveTitle: `Endless Wave ${currentWave}`,
+        isBossWave: currentWave % 5 === 0,
+        activeStrategyName: this.activeWaveStrategyName,
+      };
+    }
+
+    const profile = getTerritoryWaveProfile(this.currentWaveContext.territoryId);
+    const waveConfig = profile.waves.find(w => w.waveNumber === currentWave);
+    
+    return {
+      currentWave,
+      totalWaves: profile.waves.length,
+      waveTitle: waveConfig?.title || `Wave ${currentWave}`,
+      isBossWave: waveConfig?.isBossWave || waveConfig?.bossId !== undefined,
+      activeStrategyName: this.activeWaveStrategyName,
+    };
+  }
+
 
   public clearBoard(): void {
     this.entities = [];

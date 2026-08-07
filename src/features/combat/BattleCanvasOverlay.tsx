@@ -9,6 +9,7 @@ interface Props {
     defendersCount: number;
     hordeCount: number;
     phase: string;
+    waveInfo?: import('../../types/combat').WaveInfo;
   };
   selectedUnit: { unit: Unit; stateName: string } | null;
   setSelectedUnit: (val: { unit: Unit; stateName: string } | null) => void;
@@ -61,6 +62,25 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
+      {/* Top Banner Alert (Wave Title & Boss Alert) */}
+      {hudStats.waveInfo && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1 z-30">
+          <div className={`px-4 py-1.5 rounded-full backdrop-blur-md border text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl ${
+            hudStats.waveInfo.isBossWave
+              ? 'bg-red-950/90 border-red-600 text-red-400 animate-pulse'
+              : 'bg-slate-950/90 border-slate-700 text-amber-300'
+          }`}>
+            {hudStats.waveInfo.isBossWave ? <Skull className="w-4 h-4 text-red-500" /> : <Swords className="w-3.5 h-3.5 text-amber-400" />}
+            <span>{hudStats.waveInfo.waveTitle || `Wave ${hudStats.waveInfo.currentWave}`}</span>
+            {hudStats.waveInfo.isBossWave && (
+              <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">
+                BOSS WAVE!
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top Control Bar & Debug HUD */}
       <div className="flex justify-between items-start pointer-events-auto">
         {/* Left Action Buttons */}
@@ -141,6 +161,19 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
             <span className="opacity-50 text-[9px] uppercase tracking-wider">Horde</span>
             <span className="text-red-400 font-bold text-xs">{hudStats.hordeCount}</span>
           </div>
+          {hudStats.waveInfo && (
+            <>
+              <div className="w-px h-3.5 bg-slate-800" />
+              <div className="flex items-center gap-1.5">
+                <span className="opacity-50 text-[9px] uppercase tracking-wider">Wave</span>
+                <span className="text-purple-400 font-extrabold text-xs">
+                  {hudStats.waveInfo.totalWaves 
+                    ? `${hudStats.waveInfo.currentWave}/${hudStats.waveInfo.totalWaves}` 
+                    : `${hudStats.waveInfo.currentWave}`}
+                </span>
+              </div>
+            </>
+          )}
           <div className="w-px h-3.5 bg-slate-800" />
           <div className="flex items-center gap-1.5">
             <span className="opacity-50 text-[9px] uppercase tracking-wider">Phase</span>
@@ -154,6 +187,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
 
       {/* Selected Unit Inspection Card Overlay */}
       {selectedUnit && (

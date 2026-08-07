@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { GameState } from '../../types/game';
-import type { Unit } from '../../types/combat';
+import type { Unit, WaveContext, WaveInfo } from '../../types/combat';
 import { useGameEngine } from '../../hooks/useGameEngine';
 import { useGameEvent } from '../../hooks/useGameEvent';
 import { useCampaign } from '../../context/CampaignContext';
 import { FACTIONS } from '../../data/units';
-import { EndlessDoomWave } from '../../core/engine/WaveStrategy';
 import { BattleCanvasRenderer } from './BattleCanvasRenderer';
 import { BattleCanvasOverlay } from './BattleCanvasOverlay';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -35,7 +34,13 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<{ unit: Unit; stateName: string } | null>(null);
   const [enemyMenuOpen, setEnemyMenuOpen] = useState(false);
-  const [hudStats, setHudStats] = useState({
+  const [hudStats, setHudStats] = useState<{
+    fps: number;
+    defendersCount: number;
+    hordeCount: number;
+    phase: string;
+    waveInfo?: WaveInfo;
+  }>({
     fps: 60,
     defendersCount: 0,
     hordeCount: 0,
@@ -64,7 +69,12 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
       engine.loadFormation(FACTIONS.pantheon.roster);
     }
 
-    engine.spawnHordeWave(new EndlessDoomWave(), 18);
+    const context: WaveContext = {
+      isSandbox: isSandboxMode,
+      territoryId: isSandboxMode ? undefined : activeTerritory?.id,
+      waveIndex: 0,
+    };
+    engine.spawnHordeWave(undefined, context);
     setSelectedUnit(null);
   }, [activeTerritory, engine, isSandboxMode, sandboxPool]);
 
@@ -106,7 +116,9 @@ export const BattleCanvas: React.FC<BattleCanvasProps> = ({
         defendersCount: engine.getDefenders().length,
         hordeCount: engine.getHorde().length,
         phase: engine.getBattlePhase(),
+        waveInfo: engine.getWaveInfo(),
       });
+
 
       if (selectedUnit) {
         const updatedEnt = engine.getEntities().find(e => e.data.id === selectedUnit.unit.id && e.data.hp > 0);

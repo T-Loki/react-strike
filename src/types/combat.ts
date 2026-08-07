@@ -143,3 +143,55 @@ export const DEFAULT_BATTLEFIELD_ZONES: BattlefieldZoneConfig = {
   neutralAreaRatio: 0.75,
   enemySpawnRatio: 1.00,
 };
+
+// ─── Wave Strategy & Wave Pipeline Types ─────────────────────────────────────
+
+export interface WaveGroup {
+  unitTemplateId: string;
+  count: number;
+  spawnDelayMs?: number;
+  linePosition?: 'front' | 'mid' | 'back';
+}
+
+export interface ScriptedWave {
+  waveNumber: number;
+  title?: string;
+  composition: WaveGroup[];
+  statModifiers?: {
+    hpMultiplier?: number;
+    damageMultiplier?: number;
+  };
+  bossId?: string;
+  isBossWave?: boolean;
+}
+
+export interface TerritoryWaveProfile {
+  territoryId: string;
+  waves: ScriptedWave[];
+  defaultFaction: string;
+}
+
+export interface WaveContext {
+  territoryId?: string;
+  waveIndex?: number;
+  pointBudget?: number;
+  difficultyMultiplier?: number;
+  isSandbox?: boolean;
+}
+
+export interface SpawnedUnitSpec {
+  unitTemplateId: string;
+  linePosition: 'front' | 'mid' | 'back';
+  hpMultiplier?: number;
+  damageMultiplier?: number;
+  isBoss?: boolean;
+}
+
+export interface WaveInfo {
+  currentWave: number;
+  totalWaves: number | null;
+  waveTitle?: string;
+  isBossWave?: boolean;
+  activeStrategyName: string;
+}
+

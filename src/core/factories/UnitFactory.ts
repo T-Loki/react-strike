@@ -1,5 +1,6 @@
-import type { Unit, UnitTemplate, BattlefieldZoneConfig } from '../../types/combat';
+import type { Unit, UnitTemplate, BattlefieldZoneConfig, SpawnedUnitSpec } from '../../types/combat';
 import { DEFAULT_BATTLEFIELD_ZONES } from '../../types/combat';
+import { HORDE_FACTION } from '../../data/units';
 
 // ─── Shared Deployment Grid Constants ────────────────────────────────────────
 // These constants define the grid in both the Pre-Battle UI and the battle
@@ -106,10 +107,58 @@ export class UnitFactory {
       homeY: y,
       faction: template?.faction || 'horde',
       weight: defaultWeight,
+      unitType: template?.unitType,
     };
   }
 
+  static createHordeFromSpec(
+    spec: SpawnedUnitSpec,
+    canvasWidth: number,
+    canvasHeight: number
+  ): Unit {
+    const template = HORDE_FACTION.catalog.find(u => u.id === spec.unitTemplateId) || HORDE_FACTION.catalog[1];
+    
+    const hpMult = spec.hpMultiplier ?? 1.0;
+    const dmgMult = spec.damageMultiplier ?? 1.0;
+
+    const marginY = 80;
+    const availableH = Math.max(100, canvasHeight - marginY * 2);
+    const y = marginY + Math.random() * availableH;
+
+    let xMinRatio = 0.76;
+    let xMaxRatio = 0.82;
+
+    if (spec.linePosition === 'mid') {
+      xMinRatio = 0.83;
+      xMaxRatio = 0.90;
+    } else if (spec.linePosition === 'back') {
+      xMinRatio = 0.91;
+      xMaxRatio = 0.97;
+    }
+
+    const x = canvasWidth * (xMinRatio + Math.random() * (xMaxRatio - xMinRatio));
+    const baseHp = Math.round(template.hp * hpMult);
+    const baseDmg = Math.round(template.damage * dmgMult);
+
+    return UnitFactory.createHorde(x, y, {
+      name: template.name,
+      hp: baseHp,
+      maxHp: baseHp,
+      damage: baseDmg,
+      armor: template.armor,
+      damageType: template.damageType,
+      armorType: template.armorType,
+      range: template.range,
+      speed: template.speed,
+      color: template.color || (spec.isBoss ? '#b91c1c' : undefined),
+      unitType: spec.isBoss || template.type === 'hero' ? 'hero' : template.type,
+      faction: 'horde',
+      weight: template.weight,
+    });
+  }
+
   static fromTemplate(
+
     template: UnitTemplate, 
     canvasWidth: number, 
     canvasHeight: number,
