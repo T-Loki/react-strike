@@ -2,7 +2,7 @@ import React from 'react';
 import { Layers, Infinity, UserCheck } from 'lucide-react';
 
 import type { UnitTemplate } from '../../types/combat';
-import { DAMAGE_TYPE_DESCRIPTIONS, ARMOR_TYPE_DESCRIPTIONS } from '../../core/math/combatMath';
+import { UnitCard } from '../../components/ui/UnitCard';
 
 export type StackEntry = {
   name: string;
@@ -119,71 +119,34 @@ export const UnitRosterList: React.FC<Props> = ({
           </div>
         ) : (
           filteredStacks.map(stack => {
-            const isSelectedStack = isSandboxSelection
-              ? sandboxSelectedName === stack.name
-              : selectedUnit && selectedUnit.name === stack.name;
-            const sampleUnit = stack.template || stack.units[0];
-            const damageType = sampleUnit?.damageType || 'Normal';
-            const armorType = sampleUnit?.armorType || 'Medium';
+            const isSelectedStack = Boolean(
+              isSandboxSelection
+                ? sandboxSelectedName === stack.name
+                : selectedUnit && selectedUnit.name === stack.name
+            );
+            const sampleUnit = stack.template || stack.units[0] || {
+              id: stack.name,
+              name: stack.name,
+              type: (stack.type as 'common' | 'elite' | 'hero') || 'common',
+              hp: stack.hp,
+              maxHp: stack.hp,
+              damage: stack.damage,
+              range: 50,
+              attackSpeed: 1.0,
+              cost: 0,
+              abilities: [],
+            };
 
             return (
-              <button
+              <UnitCard
                 key={stack.name}
+                unit={sampleUnit}
+                variant="deployment"
+                count={stack.infinite ? undefined : stack.units.length}
+                isInfinite={stack.infinite}
+                isSelected={isSelectedStack}
                 onClick={() => handleStackClick(stack)}
-                className={`w-full flex flex-col items-start p-3 rounded-lg border-2 transition-all text-left relative ${
-                  isSelectedStack 
-                    ? 'border-cyan-400 bg-cyan-950/60 shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-[1.02]' 
-                    : 'border-slate-700 bg-slate-950 hover:border-slate-500 hover:bg-slate-900/80'
-                }`}
-              >
-                <div className={`absolute top-2 right-2 px-2 py-0.5 font-black text-[10px] rounded-full shadow-md flex items-center gap-0.5 ${
-                  stack.infinite
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-amber-500 text-black'
-                }`}>
-                  {stack.infinite ? <Infinity className="w-3 h-3" /> : `×${stack.units.length}`}
-                </div>
-
-                <div className="flex items-center gap-2 pr-8 w-full">
-                  <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                    stack.type === 'hero' 
-                      ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]' 
-                      : stack.type === 'elite'
-                      ? 'bg-purple-500 shadow-[0_0_6px_rgba(147,51,234,0.5)]'
-                      : 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.4)]'
-                  }`} />
-                  <span className="font-bold text-white text-sm truncate">{stack.name}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 uppercase mt-0.5 ml-5">
-                  {stack.type}{stack.infinite ? ' · Unlimited' : ''}
-                </span>
-                
-                <div className="text-[11px] text-slate-400 mt-2 font-mono flex justify-between w-full">
-                  <span>HP: {stack.hp}</span>
-                  <span>DMG: {stack.damage}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 mt-2 text-[10px] font-mono w-full">
-                  <span 
-                    title={DAMAGE_TYPE_DESCRIPTIONS[damageType]} 
-                    className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
-                  >
-                    ATK: {damageType}
-                  </span>
-                  <span 
-                    title={ARMOR_TYPE_DESCRIPTIONS[armorType]} 
-                    className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
-                  >
-                    DEF: {armorType}
-                  </span>
-                </div>
-
-                {isSelectedStack && (
-                  <div className="mt-2 text-[10px] text-cyan-300 font-bold flex items-center gap-1">
-                    <UserCheck className="w-3 h-3" /> Ready to Place
-                  </div>
-                )}
-              </button>
+              />
             );
           })
         )}

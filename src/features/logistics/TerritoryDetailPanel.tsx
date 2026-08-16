@@ -3,6 +3,7 @@ import type { Territory, UnitTemplate } from '../../types/combat';
 import type { EmporiumItem } from '../../types/game';
 import { Flame, Shield, Coins, Users, Skull, ChevronRight, BarChart3 } from 'lucide-react';
 import { EmpireOverviewPanel } from './EmpireOverviewPanel';
+import { UnitCard } from '../../components/ui/UnitCard';
 
 interface Props {
   territory: Territory | null;
@@ -165,22 +166,21 @@ export const TerritoryDetailPanel: React.FC<Props> = ({
               {territory.allocatedDefenders.length === 0 ? (
                 <div className="text-slate-500 text-xs italic py-2">No units assigned to this territory yet.</div>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2.5">
                   {Object.values(
                     territory.allocatedDefenders.reduce((acc, u) => {
-                      if (!acc[u.name]) acc[u.name] = { name: u.name, count: 0 };
+                      if (!acc[u.name]) acc[u.name] = { unit: u, count: 0 };
                       acc[u.name].count += 1;
                       return acc;
-                    }, {} as Record<string, { name: string; count: number }>)
+                    }, {} as Record<string, { unit: UnitTemplate; count: number }>)
                   ).map(stack => (
-                    <div
-                      key={stack.name}
-                      className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-slate-300 font-mono flex items-center gap-1.5"
-                    >
-                      <Shield className="w-3 h-3 text-amber-400" />
-                      <span className="font-semibold text-white">{stack.name}</span>
-                      <span className="text-amber-400 font-bold text-[11px]">x{stack.count}</span>
-                    </div>
+                    <UnitCard
+                      key={stack.unit.name}
+                      unit={stack.unit}
+                      variant="city_management"
+                      count={stack.count}
+                      assignedLocationName={territory.name}
+                    />
                   ))}
                 </div>
               )}

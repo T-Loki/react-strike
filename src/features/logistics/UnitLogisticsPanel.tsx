@@ -4,8 +4,8 @@ import { FACTIONS } from '../../data/units';
 import { Users, Coins, Shield, ArrowLeftRight, Swords } from 'lucide-react';
 import { groupUnitsIntoStackMap, groupAssignedDefendersIntoStacks } from '../../core/math/empireCalculations';
 import type { UnitStack } from '../../core/math/empireCalculations';
-import { DAMAGE_TYPE_DESCRIPTIONS, ARMOR_TYPE_DESCRIPTIONS } from '../../core/math/combatMath';
 import { DamageMatrixModal } from '../../components/DamageMatrixModal';
+import { UnitCard } from '../../components/ui/UnitCard';
 
 interface Props {
   territories: Territory[];
@@ -114,88 +114,56 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
               const canAfford = gold >= template.cost;
 
               return (
-                <div
+                <UnitCard
                   key={template.id}
-                  className="bg-slate-900 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors flex flex-col gap-2.5 shadow-sm"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-bold text-white text-sm flex items-center gap-2">
-                        {template.name}
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase font-mono">
-                          {template.type}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 uppercase mt-0.5 flex items-center gap-2">
-                        <span>HP: {template.hp} | DMG: {template.damage} | Range: {template.range}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
-                        <span 
-                          title={DAMAGE_TYPE_DESCRIPTIONS[template.damageType || 'Normal']} 
-                          className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
-                        >
-                          ATK: {template.damageType || 'Normal'}
-                        </span>
-                        <span 
-                          title={ARMOR_TYPE_DESCRIPTIONS[template.armorType || 'Medium']} 
-                          className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
-                        >
-                          DEF: {template.armorType || 'Medium'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-amber-300 font-mono px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded">
-                        x{reserveUnits.length} in reserve
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions Bar: Standardised Deploy & Integrated Recruit */}
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-800/80">
-                    <div className="flex items-center gap-1">
-                      {selectedTerritory && (
-                        <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs">
-                          <span className="text-slate-400 font-bold mr-1">Deploy:</span>
-                          <button
-                            onClick={() => reserveUnits.length > 0 && onAllocateUnit(selectedTerritory.id, reserveUnits[0].id)}
-                            disabled={reserveUnits.length === 0}
-                            className={`px-2 py-0.5 font-bold text-xs rounded transition-colors ${
-                              reserveUnits.length > 0
-                                ? 'bg-green-900/80 hover:bg-green-700 text-green-200'
-                                : 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                            }`}
-                            title="Assign to territory"
-                          >
-                            1
-                          </button>
-                          {reserveUnits.length > 1 && (
+                  unit={template}
+                  variant="city_management"
+                  count={reserveUnits.length}
+                  actions={
+                    <>
+                      <div className="flex items-center gap-1">
+                        {selectedTerritory && (
+                          <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs">
+                            <span className="text-slate-400 font-bold mr-1">Deploy:</span>
                             <button
-                              onClick={() => handleTransferStackToGarrison(reserveUnits)}
-                              className="px-2 py-0.5 bg-cyan-900/80 hover:bg-cyan-700 text-cyan-200 text-xs font-bold rounded transition-colors"
+                              onClick={() => reserveUnits.length > 0 && onAllocateUnit(selectedTerritory.id, reserveUnits[0].id)}
+                              disabled={reserveUnits.length === 0}
+                              className={`px-2 py-0.5 font-bold text-xs rounded transition-colors ${
+                                reserveUnits.length > 0
+                                  ? 'bg-green-900/80 hover:bg-green-700 text-green-200'
+                                  : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                              }`}
+                              title="Assign to territory"
                             >
-                              All ({reserveUnits.length})
+                              1
                             </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                            {reserveUnits.length > 1 && (
+                              <button
+                                onClick={() => handleTransferStackToGarrison(reserveUnits)}
+                                className="px-2 py-0.5 bg-cyan-900/80 hover:bg-cyan-700 text-cyan-200 text-xs font-bold rounded transition-colors"
+                              >
+                                All ({reserveUnits.length})
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Integrated Recruit Button showing unit cost (Heroes excluded) */}
-                    <button
-                      onClick={() => onBuyUnit(template.id)}
-                      disabled={!canAfford}
-                      className={`px-3 py-1 rounded font-bold text-xs flex items-center gap-1 transition-all ${
-                        canAfford
-                          ? 'bg-amber-600 hover:bg-amber-500 text-black shadow-md'
-                          : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <Coins className="w-3.5 h-3.5" /> Recruit ({template.cost}g)
-                    </button>
-                  </div>
-                </div>
+                      {/* Integrated Recruit Button showing unit cost (Heroes excluded) */}
+                      <button
+                        onClick={() => onBuyUnit(template.id)}
+                        disabled={!canAfford}
+                        className={`px-3 py-1 rounded font-bold text-xs flex items-center gap-1 transition-all ${
+                          canAfford
+                            ? 'bg-amber-600 hover:bg-amber-500 text-black shadow-md'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5" /> Recruit ({template.cost}g)
+                      </button>
+                    </>
+                  }
+                />
               );
             })}
 
@@ -206,57 +174,31 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
                 const reserveUnits = poolStackMap[name];
                 const sample = reserveUnits[0];
                 return (
-                  <div
+                  <UnitCard
                     key={name}
-                    className="bg-slate-900 p-3 rounded-xl border border-amber-500/40 transition-colors flex flex-col gap-2 shadow-sm"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-amber-300 text-sm flex items-center gap-2">
-                          ★ {sample.name}
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 uppercase font-mono border border-amber-800">
-                            HERO (UNIQUE)
-                          </span>
+                    unit={sample}
+                    variant="city_management"
+                    count={reserveUnits.length}
+                    actions={
+                      <>
+                        <div className="flex items-center gap-1">
+                          {selectedTerritory && (
+                            <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs">
+                              <span className="text-slate-400 font-bold mr-1">Deploy:</span>
+                              <button
+                                onClick={() => onAllocateUnit(selectedTerritory.id, reserveUnits[0].id)}
+                                className="px-2 py-0.5 bg-green-900/80 hover:bg-green-700 text-green-200 font-bold text-xs rounded transition-colors"
+                                title="Assign to territory"
+                              >
+                                1
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-[11px] text-slate-400 uppercase mt-0.5">
-                          HP: {sample.hp} | DMG: {sample.damage}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
-                          <span 
-                            title={DAMAGE_TYPE_DESCRIPTIONS[sample.damageType || 'Hero']} 
-                            className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
-                          >
-                            ATK: {sample.damageType || 'Hero'}
-                          </span>
-                          <span 
-                            title={ARMOR_TYPE_DESCRIPTIONS[sample.armorType || 'Hero']} 
-                            className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
-                          >
-                            DEF: {sample.armorType || 'Hero'}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-amber-300 font-mono px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded">
-                        x{reserveUnits.length} in reserve
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-800/80">
-                      {selectedTerritory && (
-                        <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs">
-                          <span className="text-slate-400 font-bold mr-1">Deploy:</span>
-                          <button
-                            onClick={() => onAllocateUnit(selectedTerritory.id, reserveUnits[0].id)}
-                            className="px-2 py-0.5 bg-green-900/80 hover:bg-green-700 text-green-200 font-bold text-xs rounded transition-colors"
-                            title="Assign to territory"
-                          >
-                            1
-                          </button>
-                        </div>
-                      )}
-                      <span className="text-[11px] text-slate-500 italic">Unique Commander (Cannot be bought)</span>
-                    </div>
-                  </div>
+                        <span className="text-[11px] text-slate-500 italic">Unique Commander (Cannot be bought)</span>
+                      </>
+                    }
+                  />
                 );
               })}
           </div>
@@ -313,70 +255,60 @@ export const UnitLogisticsPanel: React.FC<Props> = ({
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-              {assignedStacks.map(stack => (
-                <div
-                  key={stack.name}
-                  className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800 hover:border-slate-700 text-xs transition-colors shadow-sm"
-                >
-                  <div>
-                    <div className="font-bold text-white flex items-center gap-1.5">
-                      {stack.name}
-                      <span className="text-[11px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold font-mono border border-cyan-500/30">
-                        x{stack.units.length}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 uppercase">
-                        {stack.type}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400 uppercase mt-0.5">
-                      HP: {stack.hp} | DMG: {stack.damage}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
-                      <span 
-                        title={DAMAGE_TYPE_DESCRIPTIONS[stack.units[0]?.damageType || 'Normal']} 
-                        className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 cursor-help"
-                      >
-                        ATK: {stack.units[0]?.damageType || 'Normal'}
-                      </span>
-                      <span 
-                        title={ARMOR_TYPE_DESCRIPTIONS[stack.units[0]?.armorType || 'Medium']} 
-                        className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 cursor-help"
-                      >
-                        DEF: {stack.units[0]?.armorType || 'Medium'}
-                      </span>
-                    </div>
-                  </div>
+              {assignedStacks.map(stack => {
+                const sample = stack.units[0] || {
+                  id: stack.name,
+                  name: stack.name,
+                  type: (stack.type as 'common' | 'elite' | 'hero') || 'common',
+                  hp: stack.hp,
+                  maxHp: stack.hp,
+                  damage: stack.damage,
+                  range: stack.range,
+                  attackSpeed: 1.0,
+                  cost: 0,
+                  abilities: [],
+                };
+                const isFixed = stack.name === 'City Militia' || stack.name === 'Garrison Soldier' || sample.abilities?.includes('Fixed Garrison');
 
-                  {/* Standardised Recall Action */}
-                  {stack.name === 'City Militia' || stack.name === 'Garrison Soldier' || stack.units[0]?.abilities?.includes('Fixed Garrison') ? (
-                    <span
-                      className="px-2 py-1 bg-slate-800/80 border border-slate-700 text-slate-400 text-[11px] font-bold rounded cursor-not-allowed"
-                      title={`${stack.name} are bound to defend their homeland and cannot be reassigned`}
-                    >
-                      Fixed Garrison
-                    </span>
-                  ) : (
-                    <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs">
-                      <span className="text-slate-400 font-bold mr-1">Recall:</span>
-                      <button
-                        onClick={() => onDeallocateUnit(selectedTerritory.id, stack.units[0].id)}
-                        className="px-2 py-0.5 bg-red-900/80 hover:bg-red-700 text-red-200 font-bold text-xs rounded transition-colors"
-                        title="Remove from territory"
-                      >
-                        1
-                      </button>
-                      {stack.units.length > 1 && (
-                        <button
-                          onClick={() => handleReturnStackToReserve(stack)}
-                          className="px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 text-xs font-bold rounded transition-colors"
+                return (
+                  <UnitCard
+                    key={stack.name}
+                    unit={sample}
+                    variant="city_management"
+                    count={stack.units.length}
+                    assignedLocationName={selectedTerritory?.name}
+                    actions={
+                      isFixed ? (
+                        <span
+                          className="px-2 py-1 bg-slate-800/80 border border-slate-700 text-slate-400 text-[11px] font-bold rounded cursor-not-allowed ml-auto"
+                          title={`${stack.name} are bound to defend their homeland and cannot be reassigned`}
                         >
-                          All ({stack.units.length})
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          Fixed Garrison
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-xs ml-auto">
+                          <span className="text-slate-400 font-bold mr-1">Recall:</span>
+                          <button
+                            onClick={() => onDeallocateUnit(selectedTerritory.id, stack.units[0].id)}
+                            className="px-2 py-0.5 bg-red-900/80 hover:bg-red-700 text-red-200 font-bold text-xs rounded transition-colors"
+                            title="Remove from territory"
+                          >
+                            1
+                          </button>
+                          {stack.units.length > 1 && (
+                            <button
+                              onClick={() => handleReturnStackToReserve(stack)}
+                              className="px-2 py-0.5 bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 text-xs font-bold rounded transition-colors"
+                            >
+                              All ({stack.units.length})
+                            </button>
+                          )}
+                        </div>
+                      )
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>
