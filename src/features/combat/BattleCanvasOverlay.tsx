@@ -2,6 +2,7 @@ import React from 'react';
 import type { GameState } from '../../types/game';
 import type { Unit, UnitTemplate } from '../../types/combat';
 import { ArrowLeft, Pause, Play, FastForward, RefreshCw, Skull, Shield, Info, X, ChevronUp, ChevronDown, Swords, Flag } from 'lucide-react';
+import { useAudio } from '../../hooks/useAudio';
 
 interface Props {
   hudStats: {
@@ -59,6 +60,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
   onSurrenderCity,
   onVictoryComplete,
 }) => {
+  const { playSFX } = useAudio();
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6">
@@ -87,14 +89,20 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
         <div className="flex gap-3 items-center">
           {onBackToMap ? (
             <button
-              onClick={onBackToMap}
+              onClick={() => {
+                playSFX('button_click');
+                onBackToMap();
+              }}
               className="px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-amber-400 font-bold text-sm shadow-xl backdrop-blur-md transition-all"
             >
               <ArrowLeft className="w-4 h-4" /> {isSandboxMode ? 'Back to Sandbox' : 'Return to Pre-Battle Planning'}
             </button>
           ) : onNavigate ? (
             <button
-              onClick={() => onNavigate('battle')}
+              onClick={() => {
+                playSFX('button_click');
+                onNavigate('battle');
+              }}
               className="px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-amber-400 font-bold text-sm shadow-xl backdrop-blur-md transition-all"
             >
               <ArrowLeft className="w-4 h-4" /> {isSandboxMode ? 'Back to Sandbox' : 'Return to Pre-Battle Planning'}
@@ -109,6 +117,7 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
                 <button
                   key={speed}
                   onClick={() => {
+                    playSFX('button_click');
                     if (speed === 0) {
                       if (!isPaused) togglePause();
                     } else {
@@ -136,7 +145,10 @@ export const BattleCanvasOverlay: React.FC<Props> = ({
 
           {onSurrenderBattle && hudStats.phase !== 'DEFEAT' && hudStats.phase !== 'SURRENDERED' && hudStats.phase !== 'VICTORY' && (
             <button
-              onClick={onSurrenderBattle}
+              onClick={() => {
+                playSFX('button_click');
+                onSurrenderBattle();
+              }}
               className="px-4 py-2 rounded-xl flex items-center justify-center gap-2 bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 font-bold text-sm shadow-xl backdrop-blur-md transition-all hover:scale-[1.02]"
               title="Surrender battle immediately"
             >

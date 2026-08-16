@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { GameState, RunPhase } from '../../types/game';
 import { EmpireManagement } from '../logistics/EmpireManagement';
 import { BattleSelectMenu } from '../logistics/BattleSelectMenu';
 import { PreBattleSetup } from './PreBattleSetup';
 import { BattleCanvas } from './BattleCanvas';
 import { useCampaign } from '../../context/CampaignContext';
+import { useAudio } from '../../hooks/useAudio';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 import { RoundSummaryScreen } from '../logistics/RoundSummaryScreen';
@@ -126,6 +127,17 @@ const PHASE_STATES: Record<RunPhase, PhaseState> = {
 export const CampaignOrchestrator: React.FC<Props> = ({ onNavigate }) => {
   const [phase, setPhase] = useState<RunPhase>('empire_management');
   const { remainingBattles } = useCampaign();
+  const { playBGM } = useAudio();
+
+  useEffect(() => {
+    if (phase === 'combat') {
+      playBGM('bgm_battle', 1000);
+    } else if (phase === 'game_over') {
+      playBGM('bgm_gameover', 1000);
+    } else {
+      playBGM('bgm_campaign', 1000);
+    }
+  }, [phase, playBGM]);
 
   const context: PhaseContext = {
     setPhase,

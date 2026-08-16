@@ -9,6 +9,7 @@ import { WaveStrategyFactory } from '../strategies/WaveStrategyFactory';
 import { getTerritoryWaveProfile } from '../../data/waves';
 import { DEPLOY_GRID_COLS } from '../factories/UnitFactory';
 import { getDirection } from '../math/utils';
+import { AudioManager } from '../audio/AudioManager';
 
 export class GameEngine {
   private static instance: GameEngine;
@@ -97,12 +98,14 @@ export class GameEngine {
   public spawnDefender(x: number, y: number, template?: Partial<Unit>): void {
     const data = UnitFactory.createDefender(x, y, template);
     this.entities.push(new UnitEntity(data));
+    AudioManager.getInstance().playSFX('unit_spawn', { volume: 0.5, minIntervalMs: 60 });
     this.events.emit('spawn', data);
   }
 
   public spawnHorde(x: number, y: number, template?: Partial<Unit>): void {
     const data = UnitFactory.createHorde(x, y, template);
     this.entities.push(new UnitEntity(data));
+    AudioManager.getInstance().playSFX('unit_spawn', { volume: 0.5, minIntervalMs: 60 });
     this.events.emit('spawn', data);
   }
 
@@ -244,6 +247,14 @@ export class GameEngine {
     if (isNaN(target.hp)) target.hp = 0;
     target.hp = Math.max(0, target.hp - damage);
 
+    // Play attack sound based on weapon/attack type
+    const sfxKey = attacker.damageType === 'Magic'
+      ? 'magic_cast'
+      : (attacker.damageType === 'Piercing' || attacker.attackRange > 100)
+        ? 'bow_shoot'
+        : 'sword_strike';
+    AudioManager.getInstance().playSFX(sfxKey, { volume: 0.6, minIntervalMs: 40 });
+
     this.damageTexts.push({
       id: `dmg-${Math.random().toString(36).substring(2, 9)}`,
       x: target.x + (Math.random() * 16 - 8),
@@ -267,6 +278,7 @@ export class GameEngine {
     });
 
     if (target.hp <= 0) {
+      AudioManager.getInstance().playSFX('unit_death', { volume: 0.7, minIntervalMs: 60 });
       this.events.emit('death', target);
     }
   };
@@ -282,6 +294,7 @@ export class GameEngine {
   public surrenderBattle(): void {
     this.isSurrendered = true;
     this.battlePhase = 'SURRENDERED';
+    AudioManager.getInstance().playSFX('defeat');
     this.events.emit('tick', { deltaTime: 0 });
   }
 
@@ -396,6 +409,7 @@ export class GameEngine {
     const hasBreachedHorde = activeHorde.some(h => h.data.x <= engageZoneWidth);
     const hasReachedLeftEdge = activeHorde.some(h => h.data.x <= 25);
 
+    const prevPhase = this.battlePhase;
     if ((activeDefenders.length === 0 && activeHorde.length > 0) || hasReachedLeftEdge) {
       this.battlePhase = 'DEFEAT';
     } else if (activeDefenders.length > 0 && activeHorde.length === 0) {
@@ -404,6 +418,14 @@ export class GameEngine {
       this.battlePhase = 'ENGAGING_ENEMY';
     } else {
       this.battlePhase = 'HOLDING_POSITION';
+    }
+
+    if (this.battlePhase !== prevPhase) {
+      if (this.battlePhase === 'VICTORY') {
+        AudioManager.getInstance().playSFX('victory');
+      } else if (this.battlePhase === 'DEFEAT') {
+        AudioManager.getInstance().playSFX('defeat');
+      }
     }
   }
 

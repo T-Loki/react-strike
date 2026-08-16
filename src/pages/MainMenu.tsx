@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { GameState } from '../types/game';
 import { Sword, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { useAudio } from '../hooks/useAudio';
 
 declare global {
   interface Window {
@@ -19,6 +20,11 @@ interface MainMenuProps {
 
 export const MainMenu: React.FC<MainMenuProps> = ({ onNavigate }) => {
   const [showExitToast, setShowExitToast] = useState(false);
+  const { playBGM, playSFX } = useAudio();
+
+  useEffect(() => {
+    playBGM('bgm_menu', 1000);
+  }, [playBGM]);
 
   const handleExit = () => {
     // Check if running in a desktop shell (Tauri/Electron)
@@ -63,7 +69,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onNavigate }) => {
 
         <div className="flex flex-col gap-5 w-full">
           <button 
-            onClick={() => onNavigate('mode_select')}
+            onClick={() => {
+              playSFX('button_click');
+              onNavigate('mode_select');
+            }}
             className="theme-btn flex items-center justify-center gap-3 px-8 py-4 rounded-lg font-bold uppercase tracking-wider text-lg w-full group"
           >
             <Sword className="w-6 h-6 group-hover:animate-bounce" />
@@ -71,7 +80,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onNavigate }) => {
           </button>
 
           <button 
-            onClick={() => onNavigate('settings')}
+            onClick={() => {
+              playSFX('button_click');
+              onNavigate('settings');
+            }}
             className="theme-btn flex items-center justify-center gap-3 px-8 py-4 rounded-lg font-bold uppercase tracking-wider text-lg w-full group"
           >
             <SettingsIcon className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
@@ -79,7 +91,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onNavigate }) => {
           </button>
 
           <button 
-            onClick={handleExit}
+            onClick={() => {
+              playSFX('button_click');
+              handleExit();
+            }}
             className="theme-btn flex items-center justify-center gap-3 px-8 py-4 rounded-lg font-bold uppercase tracking-wider text-lg w-full group opacity-80 hover:opacity-100"
           >
             <LogOut className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />

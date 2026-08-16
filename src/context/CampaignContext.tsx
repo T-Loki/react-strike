@@ -5,6 +5,7 @@ import type { EmporiumItem } from '../types/game';
 import { INITIAL_TERRITORIES } from '../data/territories';
 import { FACTIONS } from '../data/units';
 import { INITIAL_EMPORIUM_ITEMS } from '../data/emporium';
+import { AudioManager } from '../core/audio/AudioManager';
 
 export interface RoundBattleRecord {
   territoryId: string;
@@ -203,6 +204,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const cost = building.upgradeCost;
     setGold(g => g - cost);
+    AudioManager.getInstance().playSFX('level_up');
 
     setTerritories(prev => prev.map(t => {
       if (t.id !== territoryId) return t;
@@ -235,6 +237,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (!template || gold < template.cost) return;
 
     setGold(g => g - template.cost);
+    AudioManager.getInstance().playSFX('coin_clink');
     const newUnit: UnitTemplate = {
       ...template,
       id: `${template.id}_recruited_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
@@ -295,6 +298,7 @@ export const CampaignProvider: React.FC<{ children: ReactNode }> = ({ children }
       if (faith < item.cost) return;
       setFaith(f => f - item.cost);
     }
+    AudioManager.getInstance().playSFX('coin_clink');
 
     // Decree effects
     if (item.id === 'dec_conscription') {

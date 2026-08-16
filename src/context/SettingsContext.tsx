@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Settings } from '../types/game';
+import { AudioManager } from '../core/audio/AudioManager';
 
 interface SettingsContextType {
   settings: Settings;
@@ -22,9 +23,11 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<Settings>(() => {
-    const saved = localStorage.getItem('direct-strike-settings');
-    if (saved) {
-      try {
+    try {
+      const saved = typeof window !== 'undefined' && window.localStorage 
+        ? window.localStorage.getItem('direct-strike-settings') 
+        : null;
+      if (saved) {
         const parsed = JSON.parse(saved) as Partial<Settings>;
         // Merge field-by-field with nullish coalescing so stale saves
         // never produce undefined for newly added fields.
@@ -39,16 +42,23 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           isBgmMuted: parsed.isBgmMuted ?? defaultSettings.isBgmMuted,
           theme: parsed.theme ?? defaultSettings.theme,
         };
-      } catch (e) {
-        return defaultSettings;
       }
+    } catch (e) {
+      return defaultSettings;
     }
     return defaultSettings;
   });
 
   useEffect(() => {
-    localStorage.setItem('direct-strike-settings', JSON.stringify(settings));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('direct-strike-settings', JSON.stringify(settings));
+      }
+    } catch {
+      // Ignore storage errors
+    }
     document.documentElement.setAttribute('data-theme', settings.theme);
+    AudioManager.getInstance().syncSettings(settings);
   }, [settings]);
 
   const updateSettings = (newSettings: Partial<Settings>) => {
